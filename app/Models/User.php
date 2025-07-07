@@ -45,4 +45,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function quotationApplications()
+    {
+        return $this->hasMany(quotation_application::class);
+    }
 }
