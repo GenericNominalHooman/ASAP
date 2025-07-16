@@ -35,7 +35,7 @@ class QuotationTenderList extends Component
             // Initialize Guzzle client with cookie handling
             $client = new Client([
                 'verify' => storage_path('certs/cacert.pem'),
-                'cookies' => new CookieJar(),
+                'cookies' => true,
                 'headers' => [
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                     'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -79,7 +79,7 @@ class QuotationTenderList extends Component
                     '__VIEWSTATE' => $viewState,
                     '__VIEWSTATEGENERATOR' => '0C32CE3C',
                     '__EVENTVALIDATION' => $eventValidation,
-                    'ctl00$MainContent$dlJabatan' => 4, // Change 1..8 to change jabatan
+                    'ctl00$MainContent$dlJabatan' => 2, // Change 1..8 to change jabatan
                 ];
 
                 // Submit form with Guzzle
@@ -173,24 +173,46 @@ class QuotationTenderList extends Component
                             // 2. Then make a GET request to the details page
                             $detailResponse = $client->get($url_apply);
                             $crawler = new Crawler((string)$detailResponse->getBody());
+                            // dd($crawler);
 
                             // 3. Extract the new viewstate and event validation
                             $viewState = $crawler->filter('input[name="__VIEWSTATE"]')->attr('value');
                             $viewStateGenerator = $crawler->filter('input[name="__VIEWSTATEGENERATOR"]')->attr('value');
                             $eventValidation = $crawler->filter('input[name="__EVENTVALIDATION"]')->attr('value');
+                            // Extract the value from the script source
+                            $scriptSrc = $crawler->filter('script[src*="ToolkitScriptManager1_HiddenField"]')->attr('src');
+                            preg_match('/_TSM_CombinedScripts_=(.*?)(?:&|$)/', $scriptSrc, $matches);
+                            $toolkitValue = urldecode($matches[1]);
+                            // Add the + symbol right after the comma
+                            $toolkitValue = str_replace(', ', ',+', $toolkitValue);
+                            
+                            // Get the cookie jar from the client
+                            $cookieJar = $client->getConfig('cookies');
+                            
+                            // Get the session ID cookie
+                            $cookie = $cookieJar->getCookieByName('ASP.NET_SessionId');
+                
+                            // Extract the session ID value
+                            $sessionId = $cookie ? $cookie->getValue() : null;
+                            
+                            // Debug output
+                            // dd([
+                            //     'sessionId' => $sessionId,
+                            //     'cookieJar' => $cookieJar
+                            // ]);
 
                             $apply_quotation_data = [
-                                'ToolkitScriptManager1_HiddenField' => '',
-                                '__EVENTTARGET' => 'ctl00$MainContent$btn2',
-                                '__EVENTARGUMENT' => '',
+                                'ToolkitScriptManager1_HiddenField' => $toolkitValue,
                                 '__LASTFOCUS' => '',
+                                '__EVENTTARGET' => '',
+                                '__EVENTARGUMENT' => '',
                                 '__VIEWSTATE' => $viewState,
                                 '__VIEWSTATEGENERATOR' => '9FB3928F',
                                 '__EVENTVALIDATION' => $eventValidation,
-                                'ctl00$MainContent$tNoPendaftaran' => 'IP0302888-W',
-                                'ctl00$MainContent$btnQuotation' => 'Semak',
+                                'ctl00$MainContent$tNoPendaftaran' => 'ip0302888-w',
+                                'ctl00$MainContent$btnQua' => 'Semak',
                                 'ctl00$MainContent$lbllayak' => '',
-                                'ctl00$MainContent$btnBack' => 'Kembali',
+                                // 'ctl00$MainContent$btnBack' => 'Kembali',
                             ];
                             // dd($apply_quotation_data);
                             
@@ -199,14 +221,32 @@ class QuotationTenderList extends Component
                                 $response = $client->post($url_apply, [
                                     'form_params' => $apply_quotation_data,
                                     'headers' => [
+                                        // 'Origin' => parse_url($url_apply, PHP_URL_SCHEME) . '://' . parse_url($url_apply, PHP_URL_HOST),
+                                        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                                        'Accept-Encoding' => 'gzip, deflate, br, zstd',
+                                        'Accept-Language' => 'en-US,en;q=0.5',
+                                        // // 'Content-Type' => 'application/x-www-form-urlencoded',
+                                        'Connection' => 'keep-alive',
+                                        'Content-Length' => '3075',
                                         'Content-Type' => 'application/x-www-form-urlencoded',
+                                        'Cookie' => 'ASP.NET_SessionId=' . $sessionId,
+                                        'Host' => 's3pk.perak.gov.my',
+                                        'Origin' => 'https://s3pk.perak.gov.my',
+                                        'Priority' => 'u=0, i',
                                         'Referer' => $url_apply,
-                                        'Origin' => parse_url($url_apply, PHP_URL_SCHEME) . '://' . parse_url($url_apply, PHP_URL_HOST),
+                                        'Sec-Fetch-Dest' => 'document',
+                                        'Sec-Fetch-Mode' => 'navigate',
+                                        'Sec-Fetch-Site' => 'same-origin',
+                                        'Sec-Fetch-User' => '?1',
+                                        'TE' => 'trailers',
+                                        'Upgrade-Insecure-Requests' => '1',
+                                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0',
+                                        // // 'Referer' => $url_apply,
                                     ]
                                 ]);
                                 
                                 $crawler = new Crawler((string)$response->getBody());
-                                dd($crawler);
+                                dd($url_apply, $apply_quotation_data, $crawler);
                             } catch (\Exception $e) {
                                 dd($e->getMessage());
                             }
