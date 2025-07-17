@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use Livewire\Component;
@@ -148,68 +150,46 @@ class QuotationTenderList extends Component
                             //     'details_link' => $tender['details_link'],
                             // ]);
                         } else {
-                            // Accessing referencedNo link
-                            $url_apply = $this->url_main."/".$tender['details_link'];
-                            // // First, make a GET request to get the form with fresh viewstate and event validation
-                            // $initialResponse = Http::withOptions([
-                            //     'verify' => storage_path('certs/cacert.pem'),
-                            //     'headers' => [
-                            //         'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                            //         'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                            //     ]
-                            // ])->get($url_apply);
-
-                            // $crawler = new Crawler($initialResponse->body());
-
-                            // // Extract the new viewstate and event validation
-                            // $viewState2 = $crawler->filter('input[name="__VIEWSTATE"]')->attr('value');
-                            // $eventValidation2 = $crawler->filter('input[name="__EVENTVALIDATION"]')->attr('value');
-                            // // dd($viewState, $eventValidation, $viewState2, $eventValidation2);
-
-                            // Reuse the existing client to maintain session
-                            // 1. First, make a GET request to the main page to establish session
-                            $client->get($this->url_main . '/IklanList.aspx');
-
-                            // 2. Then make a GET request to the details page
-                            $detailResponse = $client->get($url_apply);
-                            $crawler = new Crawler((string)$detailResponse->getBody());
-
-                            // 3. Extract the new viewstate and event validation
-                            $viewState = $crawler->filter('input[name="__VIEWSTATE"]')->attr('value');
-                            $viewStateGenerator = $crawler->filter('input[name="__VIEWSTATEGENERATOR"]')->attr('value');
-                            $eventValidation = $crawler->filter('input[name="__EVENTVALIDATION"]')->attr('value');
-
-                            $apply_quotation_data = [
-                                'ToolkitScriptManager1_HiddenField' => '',
-                                '__EVENTTARGET' => 'ctl00$MainContent$btn2',
-                                '__EVENTARGUMENT' => '',
-                                '__LASTFOCUS' => '',
-                                '__VIEWSTATE' => $viewState,
-                                '__VIEWSTATEGENERATOR' => '9FB3928F',
-                                '__EVENTVALIDATION' => $eventValidation,
-                                'ctl00$MainContent$tNoPendaftaran' => 'IP0302888-W',
-                                'ctl00$MainContent$btnQuotation' => 'Semak',
-                                'ctl00$MainContent$lbllayak' => '',
-                                'ctl00$MainContent$btnBack' => 'Kembali',
-                            ];
-                            // dd($apply_quotation_data);
+                            $url_apply = $this->url_main . "/" . $tender['details_link'];
                             
-                            // 5. Submit the form with the same client to maintain session
-                            try {
-                                $response = $client->post($url_apply, [
-                                    'form_params' => $apply_quotation_data,
-                                    'headers' => [
-                                        'Content-Type' => 'application/x-www-form-urlencoded',
-                                        'Referer' => $url_apply,
-                                        'Origin' => parse_url($url_apply, PHP_URL_SCHEME) . '://' . parse_url($url_apply, PHP_URL_HOST),
-                                    ]
-                                ]);
-                                
-                                $crawler = new Crawler((string)$response->getBody());
-                                dd($crawler);
-                            } catch (\Exception $e) {
-                                dd($e->getMessage());
-                            }
+                            \Laravel\Dusk\Browser::macro('scrapeTender', function ($url_apply) {
+                                $browser->visit($url_apply)
+                                    ->waitFor('input[name="__VIEWSTATE"]')
+                                    ->with('form', function (Browser $form) {
+                                        // Get form values
+                                        $viewState = $form->attribute('input[name="__VIEWSTATE"]', 'value');
+                                        $eventValidation = $form->attribute('input[name="__EVENTVALIDATION"]', 'value');
+                                        $toolkitValue = $form->attribute('#ToolkitScriptManager1_HiddenField', 'value');
+                                        
+                                        // Fill the form
+                                        $form->type('ctl00$MainContent$tNoPendaftaran', 'IP0302888-W')
+                                            ->click('input[name="ctl00$MainContent$btnQuotation"]');
+                                        
+                                        // Wait for any AJAX/redirect
+                                        $form->pause(2000);
+                                        
+                                        // Return the data
+                                        return [
+                                            'viewState' => $viewState,
+                                            'eventValidation' => $eventValidation,
+                                            'toolkitValue' => $toolkitValue,
+                                            'pageContent' => $browser->driver->getPageSource()
+                                        ];
+                                    });
+                            });
+                        
+                            // Execute the browser
+                            $data = (new class extends DuskTestCase {
+                                public function scrape($url_apply) {
+                                    return $this->browse(function (Browser $browser) use ($url_apply) {
+                                        return $browser->scrapeTender($url_apply);
+                                    });
+                                }
+                            })->scrape($url_apply);
+                        
+                            // Process the results
+                            $crawler = new Crawler($data['pageContent']);
+                            // Continue with your processing...
 
                             
                             // $response = Http::withOptions([
