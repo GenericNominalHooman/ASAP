@@ -15,6 +15,7 @@ class TenderSettings extends Component
     public $setting_ids = [];
     public $g_level = [];
     public $specialization = [];
+    public $specialization2 = [];
     
     public function mount(){
         // Extract QuotationSettings data
@@ -27,7 +28,10 @@ class TenderSettings extends Component
         $this->g_level = auth()->user()->gredLevels;
         // dd($this->g_level);
         
-        $this->specialization = $this->QuotationSettings->pluck('specialization')->toArray();
+        $this->specialization = auth()->user()->specializations;
+        // dd($this->specialization);
+
+        // $this->specialization = $this->QuotationSettings->pluck('specialization')->toArray();
         $this->setting_ids = $this->QuotationSettings->pluck('id')->toArray();
     }
     
