@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('quotation_settings', function (Blueprint $table) {
+        Schema::create('user_gred_levels', function (Blueprint $table) {
             $table->id();
             $table->char('g_level', 2);
-            $table->char('specialization', 4);
             $table->unsignedBigInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('quotation_settings');
+        Schema::dropIfExists('user_gred_levels');
     }
 };

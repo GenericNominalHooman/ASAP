@@ -3,9 +3,10 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\GredLevel;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
@@ -49,5 +50,13 @@ class User extends Authenticatable
     public function quotationApplications()
     {
         return $this->hasMany(quotation_application::class);
+    }
+
+    public function quotationSettings(){
+        return $this->hasMany(QutoationSetting::class);
+    }
+
+    public function gredLevels(){
+        return $this->hasMany(GredLevel::class);
     }
 }
