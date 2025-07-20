@@ -11,48 +11,53 @@ use Livewire\Attributes\Layout;
 class TenderSettings extends Component
 {
     // QuotationSettings data
-    public $QuotationSettings;
-    public $setting_ids = [];
     public $g_level = [];
+    public $g_level_old = [];
     public $specialization = [];
-    public $specialization2 = [];
     
     public function mount(){
-        // Extract QuotationSettings data
-        $this->QuotationSettings = auth()->user()->quotationSettings;
-
-        // Message QuotationSettings data
-        $this->QuotationSettings = $this->QuotationSettings->keyBy('id');
-        // dd($this->QuotationSettings);
-
         $this->g_level = auth()->user()->gredLevels;
+        $this->g_level_old = $this->g_level;
         // dd($this->g_level);
         
         $this->specialization = auth()->user()->specializations;
         // dd($this->specialization);
 
-        // $this->specialization = $this->QuotationSettings->pluck('specialization')->toArray();
-        $this->setting_ids = $this->QuotationSettings->pluck('id')->toArray();
     }
     
     public function render()
     {
-        // dd($this->QuotationSettings);
-        return view('livewire.tender-settings', [
-            'QuotationSettings' => $this->QuotationSettings
-        ]);
+        return view('livewire.tender-settings');
     }
 
     public function saveSettings(){
-        // dd($this->g_level, $this->specialization);
-        foreach($this->g_level as $g_val){
-            foreach($this->specialization as $specialization_val){
-                auth()->user()->quotationSettings()->updateOrCreate([
-                    'g_level' => $g_val,
-                    'specialization' => $specialization_val,
-                ]);
-            }
+        // Validate g_level and specialization
+        // $this->validate([
+        //     'g_level' => 'required',
+        //     'specialization' => 'required',
+        // ]);
+        
+        // Update or create any changes to user's gred level
+        for ($i = 0; $i < count($this->g_level); $i++) {
+            $g_val = $this->g_level[$i];
+            // dd($this->g_level, $g_val['g_level']);
+            GredLevel::updateOrCreate(
+                [
+                    'g_level' => $this->g_level_old[$i]['g_level'],
+                ],
+                [
+                'g_level' => $this->g_level[$i]['g_level'],
+                'user_id' => auth()->user()->id,
+                'updated_at' => now(),
+            ]);
         }
+        // Update any changes to user's specialization
+        // foreach($this->specialization as $specialization_val){
+        //     Specialization::updateOrCreate([
+        //         'specialization' => $specialization_val,
+        //         'user_id' => auth()->user()->id,
+        //     ]);
+        // }
         $this->dispatch('alert', type: 'success', message: 'Settings saved successfully');
     }
 }

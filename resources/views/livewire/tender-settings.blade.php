@@ -12,39 +12,42 @@
 
                     <form class="max-w-sm mx-auto" wire:submit.prevent="saveSettings">
                         @csrf
-                        {{$QuotationSettings}}
-                        <!-- Check whether QuotationSettings array exists -->
-                         @if($QuotationSettings)
+                        <!-- Display current user's CIDB gred levels -->
+                        @if($g_level)
                             <h2 class="text-xl font-bold">G levels:</h2>
-                                    <!-- Check if all items have g_level = 1, PS: NOT EFFICIENT -->
-                                    <div class="flex items-center mb-4">
-                                        <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G1" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', '1') ? 'checked' : '' }}>
-                                        <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G1</label>
-                                    </div>
-                                    <div class="flex items-center mb-4">
-                                        <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G2" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', '2') ? 'checked' : '' }}>
-                                        <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G2</label>
-                                    </div>
-                                    <div class="flex items-center mb-4">
-                                        <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G3" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', '3') ? 'checked' : '' }}>
-                                        <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G3</label>
-                                    </div>
-                                    <div class="flex items-center mb-4">
-                                        <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G4" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', '4') ? 'checked' : '' }}>
-                                        <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G4</label>
-                                    </div>
-                                    <div class="flex items-center mb-4">
-                                        <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G5" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', '5') ? 'checked' : '' }}>
-                                        <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G5</label>
-                                    </div>
-                                    <div class="flex items-center mb-4">
-                                        <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G6" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', '6') ? 'checked' : '' }}>
-                                        <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G6</label>
-                                    </div>
-                                    <div class="flex items-center mb-4">
-                                        <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G7" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', '7') ? 'checked' : '' }}>
-                                        <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G7</label>
-                                    </div>
+                                <!-- Check if all items have g_level = 1, PS: NOT EFFICIENT -->
+                                <div class="flex items-center mb-4">
+                                    <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G1" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', 'G1') ? 'checked' : '' }}>
+                                    <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G1</label>
+                                </div>
+                                <div class="flex items-center mb-4">
+                                    <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G2" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', 'G2') ? 'checked' : '' }}>
+                                    <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G2</label>
+                                </div>
+                                <div class="flex items-center mb-4">
+                                    <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G3" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', 'G3') ? 'checked' : '' }}>
+                                    <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G3</label>
+                                </div>
+                                <div class="flex items-center mb-4">
+                                    <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G4" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', 'G4') ? 'checked' : '' }}>
+                                    <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G4</label>
+                                </div>
+                                <div class="flex items-center mb-4">
+                                    <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G5" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', 'G5') ? 'checked' : '' }}>
+                                    <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G5</label>
+                                </div>
+                                <div class="flex items-center mb-4">
+                                    <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G6" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', 'G6') ? 'checked' : '' }}>
+                                    <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G6</label>
+                                </div>
+                                <div class="flex items-center mb-4">
+                                    <input name="g_level[]" wire:model="g_level[]" id="default-checkbox" type="checkbox" value="G7" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" {{ $g_level->contains('g_level', 'G7') ? 'checked' : '' }}>
+                                    <label for="default-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">G7</label>
+                                </div>
+                        @endif
+                        
+                        <!-- Display current user's specializations -->
+                        @if($specialization)
                             <h2 class="text-xl font-bold">Specialization:</h2>
                             <h2 class="text-lg font-bold">Buildings(B):</h2>
                                 <div class="flex items-center">
