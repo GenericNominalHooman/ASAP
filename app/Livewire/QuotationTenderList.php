@@ -112,15 +112,17 @@ class QuotationTenderList extends Component
                     });
                     
                     // Check whether the tenders/quotations already exists within DB for the current user
-                    // dd($tenders);
+                    dd($tenders);
                     if (session_status() === PHP_SESSION_ACTIVE) {
                         session()->flush();
                         session()->regenerate();
                     }
+
+                    // Check with quotation table, if doesnt yet exist add to entry
                     
                     foreach ($tenders as $tender) {
                         $existingTender = auth()->user()->quotationApplications()->where('file_name', $tender['quotation_no'])->first();
-                        dd($existingTender);
+                        // dd($existingTender);
                         // $existingTender = quotation_application::where('quotation_no', $tender['quotation_no'])->where('user_id', Auth::user()->id)->first();
                         if ($existingTender) {
                             // Update existing tender: * A quotation is updated through the system due to mistakes - not yet handle

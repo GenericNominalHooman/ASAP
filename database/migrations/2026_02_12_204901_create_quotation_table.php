@@ -13,23 +13,23 @@ return new class extends Migration
     {
         Schema::create('quotation', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
-        });
-
-        Schema::table('quotation', function (Blueprint $table) {
+            // New field to accept "JPS/IP/P/PK/S.H/12026 (PPP)"
+            $table->string('quotation_no'); 
             $table->text("file_name");
             $table->text("title");
             $table->text("specializations");
-            $table->timestamp("begin_register_date");
-            $table->timestamp("end_register_date");
-            $table->timestamp("closing_date");
+            $table->timestamp("begin_register_date")->nullable();
+            $table->timestamp("end_register_date")->nullable();
+            $table->timestamp("closing_date")->nullable();
             $table->text("slip_path");
             $table->text("site_visit_location");
-            $table->timestamp("site_visit_date");
+            $table->timestamp("site_visit_date")->nullable();
             $table->text("advert_path");
             $table->text("serial_number");
             $table->text("organization");
             $table->text("status");
+            
+            $table->timestamps();
         });
     }
 
