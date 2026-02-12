@@ -1,0 +1,62 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // Drop old columns and add new ones in a single transaction
+        Schema::table('quotation_applications', function (Blueprint $table) {
+            // Drop old columns
+            $table->dropForeign(['user_id']);
+            $table->dropColumn([
+                'user_id', 'file_name', 'title', 'specializations',
+                'begin_register_date', 'end_register_date', 'closing_date',
+                'slip_path', 'site_visit_location', 'site_visit_date',
+                'advert_path', 'serial_number', 'owner', 'status'
+            ]);
+            
+            // Add new columns
+            $table->unsignedBigInteger('quotation_id');
+            $table->foreign('quotation_id')->references('id')->on('quotation')->onDelete('cascade');
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+        });
+    }
+    
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('quotation_applications', function (Blueprint $table) {
+            // Drop the new columns
+            $table->dropForeign(['quotation_id']);
+            $table->dropForeign(['user_id']);
+            $table->dropColumn(['quotation_id', 'user_id']);
+
+            // Re-add the old columns
+            $table->text("file_name");
+            $table->text("title");
+            $table->text("specializations");
+            $table->timestamp("begin_register_date");
+            $table->timestamp("end_register_date");
+            $table->timestamp("closing_date");
+            $table->text("slip_path");
+            $table->text("site_visit_location");
+            $table->timestamp("site_visit_date");
+            $table->text("advert_path");
+            $table->text("serial_number");
+            $table->text("owner");
+            $table->text("status");
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+        });
+    }
+};

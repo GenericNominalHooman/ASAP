@@ -110,17 +110,17 @@ class QuotationTenderList extends Component
                             'details_link' => $href,
                         ];
                     });
+                    
                     // Check whether the tenders/quotations already exists within DB for the current user
-                    $tenders = [$tenders[0]];
+                    // dd($tenders);
                     if (session_status() === PHP_SESSION_ACTIVE) {
                         session()->flush();
                         session()->regenerate();
                     }
                     
-                    // dd($tenders);
                     foreach ($tenders as $tender) {
                         $existingTender = auth()->user()->quotationApplications()->where('file_name', $tender['quotation_no'])->first();
-                        // dd($existingTender);
+                        dd($existingTender);
                         // $existingTender = quotation_application::where('quotation_no', $tender['quotation_no'])->where('user_id', Auth::user()->id)->first();
                         if ($existingTender) {
                             // Update existing tender: * A quotation is updated through the system due to mistakes - not yet handle
