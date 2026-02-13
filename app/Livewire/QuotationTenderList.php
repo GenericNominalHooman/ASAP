@@ -71,7 +71,7 @@ class QuotationTenderList extends Component
                     '__VIEWSTATE' => $viewState,
                     '__VIEWSTATEGENERATOR' => '0C32CE3C',
                     '__EVENTVALIDATION' => $eventValidation,
-                    'ctl00$MainContent$dlJabatan' => 4, // Change 1..8 to change jabatan
+                    'ctl00$MainContent$dlJabatan' => 2, // Change 1..8 to change jabatan
                 ];
 
                 // Submit form with Guzzle
@@ -157,47 +157,84 @@ class QuotationTenderList extends Component
                             $safeFilename = 'tender-' . time() . '-' . Str::random(8) . '.html';
                             $safeFilename = preg_replace('/[^a-zA-Z0-9\-_\.]/', '', $safeFilename); // Remove any remaining invalid characters
 
-                            Browser::macro('scrapeTender', function ($url_apply) {
-                                $this->browser->visit($url_apply)
-                                    ->waitFor('input[name="__VIEWSTATE"]')
-                                    ->with('form', function (Browser $form) {
-                                        // Get form values
-                                        $viewState = $form->attribute('input[name="__VIEWSTATE"]', 'value');
-                                        $eventValidation = $form->attribute('input[name="__EVENTVALIDATION"]', 'value');
-                                        $toolkitValue = $form->attribute('#ToolkitScriptManager1_HiddenField', 'value');
+                            if (!Browser::hasMacro('scrapeTender')) {
+                                Browser::macro('scrapeTender', function ($url_apply) {
+                                    $data = [];
+                                    $this->visit($url_apply)
+                                        ->waitFor('#header', 30)
+                                        ->click('#MainContent_btn2')
+                                        ->waitFor('input[name="ctl00$MainContent$tNoPendaftaran"]', 30)
+                                        ->with('form', function (Browser $form) use (&$data) {
+                                            // Fill the form
+                                            $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', 'IP0302888-W')
+                                                ->click('input[name="ctl00$MainContent$btnQua"]');
 
-                                        // Fill the form
-                                        $form->type('ctl00$MainContent$tNoPendaftaran', 'IP0302888-W')
-                                            ->click('input[name="ctl00$MainContent$btnQuotation"]');
+                                            // Wait for any AJAX/redirect
+                                            $form->pause(2000);
 
-                                        // Wait for any AJAX/redirect
-                                        $form->pause(2000);
+                                            // Get form values
+                                            $viewState = $form->attribute('input[name="__VIEWSTATE"]', 'value');
+                                            $eventValidation = $form->attribute('input[name="__EVENTVALIDATION"]', 'value');
+                                            $toolkitValue = $form->attribute('#ToolkitScriptManager1_HiddenField', 'value');
 
-                                        // Return the data
-                                        return [
-                                            'viewState' => $viewState,
-                                            'eventValidation' => $eventValidation,
-                                            'toolkitValue' => $toolkitValue,
-                                            'pageContent' => $this->browser->driver->getPageSource()
-                                        ];
-                                    });
-                            });
+                                            // Capture the data
+                                            $data = [
+                                                'viewState' => $viewState,
+                                                'eventValidation' => $eventValidation,
+                                                'toolkitValue' => $toolkitValue,
+                                                'pageContent' => $form->driver->getPageSource()
+                                            ];
+                                        });
+                                    return $data;
+                                });
+                            }
 
                             // Execute the browser
                             try {
                                 if (!isset($this->browser)) {
                                     $this->browser = new class ('test') extends DuskTestCase {
-                                        public function scrape($url_apply)
+                                        protected $filename;
+
+                                        public function scrape($url_apply, $filename)
                                         {
+                                            $this->filename = $filename;
+                                            set_time_limit(300);
+                                            Browser::$storeScreenshotsAt = storage_path('logs/dusk/screenshots');
+                                            Browser::$storeConsoleLogAt = storage_path('logs/dusk/console');
+                                            Browser::$storeSourceAt = storage_path('logs/dusk/source');
+
                                             return $this->browse(function (Browser $browser) use ($url_apply) {
-                                                return $browser->scrapeTender($url_apply);
+                                                $data = $browser->scrapeTender($url_apply);
+
+                                                // Capture success screenshot
+                                                $name = 'success-' . str_replace('.html', '', $this->filename);
+                                                $browser->screenshot($name);
+                                                $browser->storeConsoleLog($name);
+                                                $browser->storeSource($name); // Store source as well for completeness
+
+                                                return $data;
+                                            });
+                                        }
+
+                                        /**
+                                         * Capture the failure screenshots for the browser.
+                                         *
+                                         * @param  \Illuminate\Support\Collection  $browsers
+                                         * @return void
+                                         */
+                                        protected function captureFailuresFor($browsers)
+                                        {
+                                            $browsers->each(function ($browser, $key) {
+                                                $name = 'failure-' . str_replace('.html', '', $this->filename) . '-' . $key;
+                                                $browser->screenshot($name);
+                                                $browser->storeConsoleLog($name);
+                                                $browser->storeSource($name);
                                             });
                                         }
                                     };
                                 }
 
-                                $data = $this->browser->scrape($url_apply);
-                                dd($data);
+                                $data = $this->browser->scrape($url_apply, $safeFilename);
 
                                 // Debug: Save the page content to a file
                                 if (!empty($data['pageContent'])) {
@@ -247,8 +284,7 @@ class QuotationTenderList extends Component
                                 // Clean up the browser instance
                                 if (isset($this->browser)) {
                                     try {
-                                        $this->browser->quit();
-                                        // dd('does this works');
+                                        $this->browser::closeAll();
                                     } catch (\Exception $e) {
                                         \Log::error('Error during browser teardown: ' . $e->getMessage());
                                     }
@@ -281,7 +317,7 @@ class QuotationTenderList extends Component
                 $this->content = implode("\n", $headings);
                 $this->status = 'Scraping completed successfully!';
             } else {
-                $this->status = 'Failed to fetch URL: ' . $response->status();
+                $this->status = 'Failed to fetch URL: ' . $response->getStatusCode();
             }
             logger()->info($this->status);  // Check storage/logs/laravel.log
         } catch (\Exception $e) {
@@ -294,7 +330,7 @@ class QuotationTenderList extends Component
     {
         // Close the browser if it's still open
         if (isset($this->browser)) {
-            $this->browser->tearDown();
+            $this->browser::closeAll();
             $this->browser = null;
         }
     }
