@@ -115,11 +115,14 @@ class QuotationTenderList extends Component
                     });
 
                     // Check whether the tenders/quotations already exists within DB for the current user
-                    // dd($tenders);
+                    dd($tenders);
                     if (session_status() === PHP_SESSION_ACTIVE) {
                         session()->flush();
                         session()->regenerate();
                     }
+
+                    // Save the initial pagination for reference to determine end of pagination
+
 
                     // Create the quotation/tender within DB based on inputted db[prior: low]
                     foreach ($tenders as $tender) {
@@ -143,7 +146,34 @@ class QuotationTenderList extends Component
                     foreach ($tenders as $tender) {
                         $existingTender = auth()->user()->quotationApplications()->where('file_name', $tender['quotation_no'])->first();
                         // dd($existingTender);
-                        // $existingTender = quotation_application::where('quotation_no', $tender['quotation_no'])->where('user_id', Auth::user()->id)->first();
+
+                        // Filter tenders based on user's gred levels(user_gred_levels.g_level) and specialization(user_specializations.specialization)
+                        $userGredLevels = auth()->user()->gredLevels->pluck('g_level')->map(fn($g) => strtoupper(trim($g)))->toArray();
+                        $userSpecializations = auth()->user()->specializations->pluck('specialization')->map(fn($s) => strtoupper(trim($s)))->toArray();
+
+                        $tenderGrade = strtoupper($tender['grade']);
+                        $tenderSpecialization = strtoupper($tender['specialization']);
+
+                        $hasMatchingGrade = false;
+                        foreach ($userGredLevels as $userGrade) {
+                            if (str_contains($tenderGrade, $userGrade)) {
+                                $hasMatchingGrade = true;
+                                break;
+                            }
+                        }
+
+                        $hasMatchingSpecialization = false;
+                        foreach ($userSpecializations as $userSpec) {
+                            if (str_contains($tenderSpecialization, $userSpec)) {
+                                $hasMatchingSpecialization = true;
+                                break;
+                            }
+                        }
+
+                        if (!$hasMatchingGrade || !$hasMatchingSpecialization) {
+                            continue;
+                        }
+
                         if ($existingTender) {
                             // Update existing tender: * A quotation is updated through the system due to mistakes - not yet handle
 
