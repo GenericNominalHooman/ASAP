@@ -11,8 +11,9 @@ use Livewire\Component;
 use Symfony\Component\DomCrawler\Crawler;
 use Livewire\Attributes\Layout;
 use App\Models\quotation_application;
+use App\Models\Quotation;
 
-#[Layout('layouts.app')] 
+#[Layout('layouts.app')]
 class QuotationTenderList extends Component
 {
     public $url = '';
@@ -22,7 +23,8 @@ class QuotationTenderList extends Component
     public $QuotationApplicationModel;
     protected $browser = null;
 
-    public function mount(){
+    public function mount()
+    {
         $this->QuotationApplicationModel = quotation_application::all();
     }
 
@@ -31,10 +33,10 @@ class QuotationTenderList extends Component
         // Remove this dd() or check network tab for its output
         logger()->info('Scrape method called');  // Check storage/logs/laravel.log
         // $this->url = "http://127.0.0.1:8000"; 
-        $this->url = "https://s3pk.perak.gov.my/IklanList.aspx"; 
-        $this->url_main = "https://s3pk.perak.gov.my"; 
+        $this->url = "https://s3pk.perak.gov.my/IklanList.aspx";
+        $this->url_main = "https://s3pk.perak.gov.my";
         $this->validate(['url' => 'required|url']);
-        
+
         try {
             // Initialize Guzzle client with cookie handling
             $client = new Client([
@@ -49,14 +51,14 @@ class QuotationTenderList extends Component
                 'allow_redirects' => true,
                 'http_errors' => false
             ]);
-            
+
             // Make the initial GET request
             $response = $client->get($this->url);
-            
+
             if ($response->getStatusCode() === 200) {
-                $crawler = new Crawler((string)$response->getBody());
+                $crawler = new Crawler((string) $response->getBody());
                 // dd($crawler);
-                
+
                 $viewState = $crawler->filter('#__VIEWSTATE')->attr('value');
                 $eventValidation = $crawler->filter('#__EVENTVALIDATION')->attr('value');
                 // dd($viewState, $eventValidation);
@@ -90,18 +92,19 @@ class QuotationTenderList extends Component
                 // ]);
                 // After getting the response
                 if ($response->getStatusCode() === 200) {
-                    $crawler = new Crawler((string)$response->getBody());
-                    
+                    $crawler = new Crawler((string) $response->getBody());
+
                     // Extract the data tables
                     // dd($crawler);   
                     $tenders = $crawler->filter('table.gv tr.gvr, table.gv tr.gva')->each(function (Crawler $node) {
                         $linkNode = $node->filter('a[href*="IklanDetails.aspx"]');
                         $href = $linkNode->count() > 0 ? $linkNode->attr('href') : null;
                         $quotationNo = $linkNode->count() > 0 ? trim($linkNode->text()) : null;
-                        
+
                         return [
                             'ref_no' => $node->filter('span[id*="_lApplication_Label60_"]')->text(),
                             'quotation_no' => $quotationNo,
+                            'organization' => $quotationNo ? substr($quotationNo, 0, 3) : null,
                             'title' => $node->filter('span[id*="_lApplication_Label1_"]')->text(),
                             'grade' => trim($node->filter('span[id*="_lApplication_tGred_"]')->text()),
                             'specialization' => trim($node->filter('span[id*="_lApplication_tGred2_"]')->text()),
@@ -110,16 +113,33 @@ class QuotationTenderList extends Component
                             'details_link' => $href,
                         ];
                     });
-                    
+
                     // Check whether the tenders/quotations already exists within DB for the current user
-                    dd($tenders);
+                    // dd($tenders);
                     if (session_status() === PHP_SESSION_ACTIVE) {
                         session()->flush();
                         session()->regenerate();
                     }
 
-                    // Check with quotation table, if doesnt yet exist add to entry
-                    
+                    // Create the quotation/tender within DB based on inputted db[prior: low]
+                    foreach ($tenders as $tender) {
+                        Quotation::firstOrCreate(
+                            ['quotation_no' => $tender['quotation_no']],
+                            [
+                                'ref_no' => $tender['ref_no'],
+                                'title' => $tender['title'],
+                                'grade' => $tender['grade'],
+                                'organization' => $tender['organization'],
+                                'specializations' => $tender['specialization'],
+                                'site_visit' => $tender['site_visit'],
+                                'closing_date' => $tender['closing_date'],
+                                'status' => $tender['closing_date'] > now() ? 'Open' : 'Closed',
+                                'details_link' => $tender['details_link'],
+                            ]
+                        );
+                    }
+
+                    // Apply the tenders/quotations to the user
                     foreach ($tenders as $tender) {
                         $existingTender = auth()->user()->quotationApplications()->where('file_name', $tender['quotation_no'])->first();
                         // dd($existingTender);
@@ -129,14 +149,14 @@ class QuotationTenderList extends Component
 
                         } else {
                             $url_apply = $this->url_main . "/" . $tender['details_link']; // e.g: https://s3pk.perak.gov.my/IklanDetails.aspx?refNo=PRO250728145251182
-                            
+
                             // Sanitize the URL to create a safe filename
                             // dd($url_apply, parse_url($url_apply, PHP_URL_PATH), time());
                             // With this more robust version:
                             $path = parse_url($url_apply, PHP_URL_PATH) ?: 'unknown-path';
                             $safeFilename = 'tender-' . time() . '-' . Str::random(8) . '.html';
                             $safeFilename = preg_replace('/[^a-zA-Z0-9\-_\.]/', '', $safeFilename); // Remove any remaining invalid characters
-                            
+
                             Browser::macro('scrapeTender', function ($url_apply) {
                                 $this->browser->visit($url_apply)
                                     ->waitFor('input[name="__VIEWSTATE"]')
@@ -145,14 +165,14 @@ class QuotationTenderList extends Component
                                         $viewState = $form->attribute('input[name="__VIEWSTATE"]', 'value');
                                         $eventValidation = $form->attribute('input[name="__EVENTVALIDATION"]', 'value');
                                         $toolkitValue = $form->attribute('#ToolkitScriptManager1_HiddenField', 'value');
-                                        
+
                                         // Fill the form
                                         $form->type('ctl00$MainContent$tNoPendaftaran', 'IP0302888-W')
                                             ->click('input[name="ctl00$MainContent$btnQuotation"]');
-                                        
+
                                         // Wait for any AJAX/redirect
                                         $form->pause(2000);
-                                        
+
                                         // Return the data
                                         return [
                                             'viewState' => $viewState,
@@ -166,31 +186,33 @@ class QuotationTenderList extends Component
                             // Execute the browser
                             try {
                                 if (!isset($this->browser)) {
-                                    $this->browser = new class('test') extends DuskTestCase {
-                                        public function scrape($url_apply) {
+                                    $this->browser = new class ('test') extends DuskTestCase {
+                                        public function scrape($url_apply)
+                                        {
                                             return $this->browse(function (Browser $browser) use ($url_apply) {
                                                 return $browser->scrapeTender($url_apply);
                                             });
                                         }
                                     };
                                 }
-                                
+
                                 $data = $this->browser->scrape($url_apply);
-                                                                                                                
+                                dd($data);
+
                                 // Debug: Save the page content to a file
                                 if (!empty($data['pageContent'])) {
                                     $debugPath = storage_path('logs/dusk/' . $safeFilename . '.html');
                                     file_put_contents($debugPath, $data['pageContent']);
                                 }
-                                                        
+
                                 // Process the results
                                 $crawler = new Crawler($data['pageContent']);
                                 // Continue with your processing...
-                                
+
                                 // Quotation application settings check
 
                                 // Submitting application form
-                                
+
 
                                 // Create new tender entry
                                 quotation_application::create([
@@ -210,12 +232,12 @@ class QuotationTenderList extends Component
                                 if (!is_dir($logDir)) {
                                     mkdir($logDir, 0755, true);
                                 }
-                                
+
                                 // Save the error to a file
                                 $errorPath = $logDir . '/error-' . $safeFilename . '.log';
                                 // dd('$errorPath: ' . $errorPath);
                                 file_put_contents($errorPath, $e->getMessage() . "\n\n" . $e->getTraceAsString());
-                                
+
                                 // Also log to Laravel's default log
                                 \Log::error('Dusk scraping error: ' . $e->getMessage(), [
                                     'exception' => $e,
@@ -243,19 +265,19 @@ class QuotationTenderList extends Component
 
                     // Store or process the tenders
                     $this->tenders = $tenders;
-                    
+
                     // For pagination, you can store the tokens for the next request
                     $this->viewState = $viewState;
                     $this->eventValidation = $eventValidation;
                     $this->viewStateGenerator = $viewStateGenerator;
                 }
 
-                
+
                 // Example: Extract all headings
                 $headings = $crawler->filter('h1, h2, h3, title')->each(function (Crawler $node) {
                     return $node->text();
                 });
-                
+
                 $this->content = implode("\n", $headings);
                 $this->status = 'Scraping completed successfully!';
             } else {
@@ -289,7 +311,8 @@ class QuotationTenderList extends Component
         return $hiddenFields;
     }
 
-    public function test(){
+    public function test()
+    {
         logger()->info('Test method called'); // Check storage/logs/laravel.log
     }
 

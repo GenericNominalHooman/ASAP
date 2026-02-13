@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,21 +13,19 @@ return new class extends Migration
         Schema::create('quotation', function (Blueprint $table) {
             $table->id();
             // New field to accept "JPS/IP/P/PK/S.H/12026 (PPP)"
-            $table->string('quotation_no'); 
-            $table->text("file_name");
+            $table->string('quotation_no');
+            // $table->text("advert_file_name"); implement this once basic listing is done
+            // $table->text("advert_file_path");
             $table->text("title");
             $table->text("specializations");
             $table->timestamp("begin_register_date")->nullable();
             $table->timestamp("end_register_date")->nullable();
             $table->timestamp("closing_date")->nullable();
-            $table->text("slip_path");
-            $table->text("site_visit_location");
+            $table->text("site_visit_location")->nullable();
             $table->timestamp("site_visit_date")->nullable();
-            $table->text("advert_path");
-            $table->text("serial_number");
             $table->text("organization");
-            $table->text("status");
-            
+            $table->text("status")->nullable(); // Expiry of the current quotation(Open/Closed)
+
             $table->timestamps();
         });
     }
