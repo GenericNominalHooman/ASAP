@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
         // Call all seeders
         $this->call([
             QuotationApplicationSeeder::class,
+            GredLevelSeeder::class,
+            SpecializationSeeder::class,
         ]);
     }
 }

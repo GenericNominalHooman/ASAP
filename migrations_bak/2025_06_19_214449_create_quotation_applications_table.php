@@ -20,8 +20,8 @@ return new class extends Migration {
             $table->timestamp("closing_date");
             $table->text("slip_path");
             $table->text("site_visit_location");
-            // $table->timestamp("site_visit_date")->nullable();
-            $table->timestamp("site_visit_date");
+            $table->timestamp("site_visit_date")->nullable();
+            // $table->timestamp("site_visit_date");
             $table->text("advert_path");
             $table->text("serial_number");
             $table->text("owner");

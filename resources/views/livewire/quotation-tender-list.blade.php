@@ -131,15 +131,18 @@
                                                 class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->site_visit_location ? 'YES' : 'NO'}}</a>
                                         </td>
                                         <td class="px-6 py-4">
-                                            {{ $QuotationApplication->site_visit_date }}<br>
-                                            @php
-                                                $days = \Carbon\Carbon::parse($QuotationApplication->site_visit_date)->diffInDays(now());
-                                                $days = $days * -1;// INvert the value since future is negative value by default
-                                            @endphp
-                                            <span
-                                                class="{{ $days < 0 ? 'text-black' : ($days <= 1 ? 'text-red-600' : ($days <= 3 ? 'text-yellow-500' : 'text-green-600')) }}">
-                                                ({{ \Carbon\Carbon::parse($QuotationApplication->site_visit_date)->diffForHumans() }})
-                                            </span>
+                                            @if ($QuotationApplication->site_visit_date)
+                                                {{ $QuotationApplication->site_visit_date }}<br>
+                                                @php
+                                                    $days = \Carbon\Carbon::parse($QuotationApplication->site_visit_date)->diffInDays(now()) * -1;
+                                                @endphp
+                                                <span
+                                                    class="{{ $days < 0 ? 'text-black' : ($days <= 1 ? 'text-red-600' : ($days <= 3 ? 'text-yellow-500' : 'text-green-600')) }}">
+                                                    ({{ \Carbon\Carbon::parse($QuotationApplication->site_visit_date)->diffForHumans() }})
+                                                </span>
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4">
                                             {{$QuotationApplication->serial_number}}

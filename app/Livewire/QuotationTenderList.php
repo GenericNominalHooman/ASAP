@@ -365,10 +365,10 @@ class QuotationTenderList extends Component
                                                 $siteVisitDateParsed = \Carbon\Carbon::createFromFormat('d/m/Y h:i A', trim($siteVisitDateRaw));
                                             } catch (\Exception $e) {
                                                 logger()->error('Failed to parse site_visit_date: ' . $data['site_visit_date']);
-                                                $siteVisitDateParsed = now();
+                                                $siteVisitDateParsed = null;
                                             }
                                         } else {
-                                            $siteVisitDateParsed = now();
+                                            $siteVisitDateParsed = null;
                                         }
 
 
@@ -382,7 +382,7 @@ class QuotationTenderList extends Component
                                                 'end_register_date' => $endRegDateParsed->format('Y-m-d H:i:s'),
                                                 'closing_date' => $closingDateParsed->format('Y-m-d H:i:s'),
                                                 'site_visit_location' => $data['site_visit_location'] ?? '',
-                                                'site_visit_date' => $siteVisitDateParsed->format('Y-m-d H:i:s'),
+                                                'site_visit_date' => ($siteVisitDateParsed === null) ?  null : $siteVisitDateParsed->format('Y-m-d H:i:s'),
                                                 'serial_number' => $tender['ref_no'],
                                                 'owner' => $tender['organization'],
                                                 'status' => 'Pending', // Initial status
