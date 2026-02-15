@@ -21,12 +21,14 @@ class QuotationTenderList extends Component
     public $content = '';
     public $status = '';
     public $QuotationApplicationModel;
+    public $QuotationApplicationModelToday;
     protected $browser = null;
-    public $userJabatan = [2, 3, 4]; // NOTE: REPLACE THIS WITH A WORKING USER'S JABATAN ID SETTINGS OPTION
+    public $userJabatan = [2, 3, 4]; // NOTE: REPLACE THIS WITH A WORKING USER'S JABATAN ID SETTINGS OPTION, AND USE ASSOCIATIVE ARRAY INSTEAD
 
     public function mount()
     {
         $this->QuotationApplicationModel = quotation_application::all();
+        $this->QuotationApplicationModelToday = quotation_application::whereDate('created_at', now()->today())->get();
     }
 
     public function scrape()
@@ -107,15 +109,23 @@ class QuotationTenderList extends Component
 
                             // Extract the data tables
                             // dd($crawler);   
-                            $tenders = $crawler->filter('table.gv tr.gvr, table.gv tr.gva')->each(function (Crawler $node) {
+                            $tenders = $crawler->filter('table.gv tr.gvr, table.gv tr.gva')->each(function (Crawler $node) use ($jabatan) {
                                 $linkNode = $node->filter('a[href*="IklanDetails.aspx"]');
                                 $href = $linkNode->count() > 0 ? $linkNode->attr('href') : null;
                                 $quotationNo = $linkNode->count() > 0 ? trim($linkNode->text()) : null;
 
+                                // Map organization to the current user's organization
+                                $orgMap = [
+                                    2 => 'JKR',
+                                    3 => 'PDT',
+                                    4 => 'JPS',
+                                ];
+                                $orgName = $orgMap[$jabatan] ?? ($quotationNo ? substr($quotationNo, 0, 3) : null);
+
                                 return [
                                     'ref_no' => $node->filter('span[id*="_lApplication_Label60_"]')->text(), // rows count number
                                     'quotation_no' => $quotationNo,
-                                    'organization' => $quotationNo ? substr($quotationNo, 0, 3) : null,
+                                    'organization' => $orgName,
                                     'title' => $node->filter('span[id*="_lApplication_Label1_"]')->text(),
                                     'grade' => trim($node->filter('span[id*="_lApplication_tGred_"]')->text()),
                                     'specialization' => trim($node->filter('span[id*="_lApplication_tGred2_"]')->text()),
@@ -382,7 +392,7 @@ class QuotationTenderList extends Component
                                                 'end_register_date' => $endRegDateParsed->format('Y-m-d H:i:s'),
                                                 'closing_date' => $closingDateParsed->format('Y-m-d H:i:s'),
                                                 'site_visit_location' => $data['site_visit_location'] ?? '',
-                                                'site_visit_date' => ($siteVisitDateParsed === null) ?  null : $siteVisitDateParsed->format('Y-m-d H:i:s'),
+                                                'site_visit_date' => ($siteVisitDateParsed === null) ? null : $siteVisitDateParsed->format('Y-m-d H:i:s'),
                                                 'serial_number' => $tender['ref_no'],
                                                 'owner' => $tender['organization'],
                                                 'status' => 'Pending', // Initial status
@@ -491,6 +501,8 @@ class QuotationTenderList extends Component
             } else {
                 $this->status = 'Failed to fetch URL: ' . $response->getStatusCode();
             }
+            $this->QuotationApplicationModel = quotation_application::all();
+            $this->QuotationApplicationModelToday = quotation_application::whereDate('created_at', now()->today())->get();
             logger()->info($this->status);  // Check storage/logs/laravel.log
         } catch (\Exception $e) {
             $this->status = 'Error: ' . $e->getMessage();
