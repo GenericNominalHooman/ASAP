@@ -7,11 +7,11 @@ use App\Models\QutoationSetting;
 use App\Models\GredLevel;
 use Livewire\Attributes\Layout;
 
-#[Layout('layouts.app')] 
+#[Layout('layouts.app')]
 class TenderSettings extends Component
 {
     // Greds and specilizations available data
-    public $gredLevelsAll = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7']; 
+    public $gredLevelsAll = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7'];
     public $specializationsBuildingsAll = [
         'B01' => 'Prefab concrete system',
         'B02' => 'Steel frame system',
@@ -81,7 +81,8 @@ class TenderSettings extends Component
         'CE36' => 'Earthworks',
         'CE37' => 'Power Station Funnel Work',
         'CE38' => 'Sewerage System Maintenance',
-        'CE39' => 'Water Supply System Maintenance'
+        'CE39' => 'Water Supply System Maintenance',
+        'CE42' => 'Road painting works'
     ];
     public $specializationsMechanicalAll = [
         'M01' => 'Air-Conditioning System',
@@ -121,17 +122,18 @@ class TenderSettings extends Component
         'E13' => 'Train Telecommunications System',
         'E14' => 'Computer Network Cable'
     ];
-    
+
     // QuotationSettings data
     public $selectedGLevels = [];
     public $selectedSpecializations = [];
-    
-    public function mount(){
+
+    public function mount()
+    {
         // Extract currently logged in user data from models
         $this->selectedGLevels = auth()->user()->gredLevels->pluck('g_level')->toArray();
         $this->selectedSpecializations = auth()->user()->specializations->pluck('specialization')->toArray();
     }
-    
+
     public function render()
     {
         return view('livewire.tender-settings');
@@ -144,23 +146,23 @@ class TenderSettings extends Component
         // 
         // Get the authenticated user
         $user = auth()->user();
-        
+
         // Delete existing gred levels
         $user->gredLevels()->delete();
-        
+
         // Create new records for selected G levels
         foreach ($this->selectedGLevels as $gLevel) {
             $user->gredLevels()->create([
                 'g_level' => $gLevel
             ]);
         }
-        
+
         // 
         // Update Specialization
         // 
         // Delete existing specializations
         $user->specializations()->delete();
-        
+
         // Create new records for selected specializations
         // dd($this->selectedSpecializations);
         foreach ($this->selectedSpecializations as $specialization) {
@@ -168,19 +170,19 @@ class TenderSettings extends Component
                 'specialization' => $specialization
             ]);
         }
-        
+
         // Show success message
         session()->flash('message', 'Settings saved successfully!');
-        
+
         // Optional: Refresh the component to show updated data
         $this->mount();
-    }    
+    }
 
     public function addGredLevelInput()
     {
         $this->g_levels_inputs[] = ['g_level' => ''];
     }
-    
+
     public function removeGredLevelInput($index)
     {
         unset($this->g_levels_inputs[$index]);
