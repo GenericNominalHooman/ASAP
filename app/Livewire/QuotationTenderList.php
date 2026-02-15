@@ -113,7 +113,7 @@ class QuotationTenderList extends Component
                                 $quotationNo = $linkNode->count() > 0 ? trim($linkNode->text()) : null;
 
                                 return [
-                                    'ref_no' => $node->filter('span[id*="_lApplication_Label60_"]')->text(),
+                                    'ref_no' => $node->filter('span[id*="_lApplication_Label60_"]')->text(), // rows count number
                                     'quotation_no' => $quotationNo,
                                     'organization' => $quotationNo ? substr($quotationNo, 0, 3) : null,
                                     'title' => $node->filter('span[id*="_lApplication_Label1_"]')->text(),
@@ -138,6 +138,17 @@ class QuotationTenderList extends Component
 
                             // Create the quotation/tender within DB based on inputted db[prior: low]
                             foreach ($tenders as $tender) {
+                                // Parse closing_date from "d M Y" format (e.g., "04 Mar 2026")
+                                $closingDateParsed = null;
+                                try {
+                                    if ($tender['closing_date']) {
+                                        $closingDateParsed = \Carbon\Carbon::createFromFormat('d M Y', trim($tender['closing_date']));
+                                    }
+                                } catch (\Exception $e) {
+                                    logger()->error('Failed to parse closing_date: ' . $tender['closing_date']);
+                                    $closingDateParsed = now(); // Fallback to current date
+                                }
+
                                 Quotation::firstOrCreate(
                                     ['quotation_no' => $tender['quotation_no']],
                                     [
@@ -147,8 +158,8 @@ class QuotationTenderList extends Component
                                         'organization' => $tender['organization'],
                                         'specializations' => $tender['specialization'],
                                         'site_visit' => $tender['site_visit'],
-                                        'closing_date' => $tender['closing_date'],
-                                        'status' => $tender['closing_date'] > now() ? 'Open' : 'Closed',
+                                        'closing_date' => $closingDateParsed,
+                                        'status' => $closingDateParsed > now() ? 'Open' : 'Closed',
                                         'details_link' => $tender['details_link'],
                                     ]
                                 );
@@ -202,32 +213,61 @@ class QuotationTenderList extends Component
 
                                     if (!Browser::hasMacro('scrapeTender')) {
                                         Browser::macro('scrapeTender', function ($url_apply) {
-                                            $data = [];
-                                            $this->visit($url_apply)
-                                                ->waitFor('#header', 30)
-                                                ->click('#MainContent_btn2')
-                                                ->waitFor('input[name="ctl00$MainContent$tNoPendaftaran"]', 30)
-                                                ->with('form', function (Browser $form) use (&$data) {
-                                                    // Fill the form
-                                                    $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', 'IP0302888-W')
-                                                        ->click('input[name="ctl00$MainContent$btnQua"]');
+                                            $data = [
+                                                'success' => false,
+                                                'error' => null,
+                                                'viewState' => null,
+                                                'eventValidation' => null,
+                                                'toolkitValue' => null,
+                                                'pageContent' => null,
+                                                'begin_registration_date' => null,
+                                                'end_registration_date' => null,
+                                            ];
 
-                                                    // Wait for any AJAX/redirect
-                                                    $form->pause(2000);
+                                            try {
+                                                $this->visit($url_apply)
+                                                    ->waitFor('#header', 30)
+                                                    ->click('#MainContent_btn2')
+                                                    ->waitFor('input[name="ctl00$MainContent$tNoPendaftaran"]', 30)
+                                                    ->with('form', function (Browser $form) use (&$data) {
+                                                        // Fill the form
+                                                        $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', 'IP0302888-W')
+                                                            ->click('input[name="ctl00$MainContent$btnQua"]');
 
-                                                    // Get form values
-                                                    $viewState = $form->attribute('input[name="__VIEWSTATE"]', 'value');
-                                                    $eventValidation = $form->attribute('input[name="__EVENTVALIDATION"]', 'value');
-                                                    $toolkitValue = $form->attribute('#ToolkitScriptManager1_HiddenField', 'value');
+                                                        // Wait for any AJAX/redirect
+                                                        $form->pause(2000);
 
-                                                    // Capture the data
-                                                    $data = [
-                                                        'viewState' => $viewState,
-                                                        'eventValidation' => $eventValidation,
-                                                        'toolkitValue' => $toolkitValue,
-                                                        'pageContent' => $form->driver->getPageSource()
-                                                    ];
-                                                });
+                                                        // Get form values with null checks
+                                                        $viewState = $form->attribute('input[name="__VIEWSTATE"]', 'value');
+                                                        $eventValidation = $form->attribute('input[name="__EVENTVALIDATION"]', 'value');
+                                                        $toolkitValue = $form->attribute('#ToolkitScriptManager1_HiddenField', 'value');
+
+                                                        // Extract date fields from the page (raw strings)
+                                                        $beginRegDate = $form->text('#MainContent_pro1_lRegStart');
+                                                        $endRegDate = $form->text('#MainContent_pro1_lRegEnd');
+                                                        // $siteVisitLocation = $form->text('#MainContent_tSVMeet'); // Not yet handle
+                                                        // $siteVisitDate = $form->text('#MainContent_tSVDate'); // Not yet handle
+                                                        // $siteVisitTime = $form->text('#MainContent_tSVTime'); // Not yet handle
+    
+                                                        // Capture the data
+                                                        $data = [
+                                                            'success' => true,
+                                                            'error' => null,
+                                                            'viewState' => $viewState,
+                                                            'eventValidation' => $eventValidation,
+                                                            'toolkitValue' => $toolkitValue,
+                                                            'pageContent' => $form->driver->getPageSource(),
+                                                            'begin_registration_date' => $beginRegDate,
+                                                            'end_registration_date' => $endRegDate,
+                                                            // 'site_visit_location' => $siteVisitLocation, // Not yet handle
+                                                            // 'site_visit_date' => trim($siteVisitDate . ' ' . $siteVisitTime), // Not yet handle
+                                                        ];
+                                                    });
+                                            } catch (\Exception $e) {
+                                                $data['error'] = $e->getMessage();
+                                                $data['pageContent'] = $this->driver->getPageSource() ?? 'Unable to capture page source';
+                                            }
+
                                             return $data;
                                         });
                                     }
@@ -246,17 +286,20 @@ class QuotationTenderList extends Component
                                                     Browser::$storeConsoleLogAt = storage_path('logs/dusk/console');
                                                     Browser::$storeSourceAt = storage_path('logs/dusk/source');
 
-                                                    return $this->browse(function (Browser $browser) use ($url_apply) {
-                                                        $data = $browser->scrapeTender($url_apply);
+                                                    // Use a reference variable to capture data since browse() doesn't return the callback value
+                                                    $capturedData = null;
+
+                                                    $this->browse(function (Browser $browser) use ($url_apply, &$capturedData) {
+                                                        $capturedData = $browser->scrapeTender($url_apply);
 
                                                         // Capture success screenshot
                                                         $name = 'success-' . str_replace('.html', '', $this->filename);
                                                         $browser->screenshot($name);
                                                         $browser->storeConsoleLog($name);
                                                         $browser->storeSource($name); // Store source as well for completeness
-
-                                                        return $data;
                                                     });
+
+                                                    return $capturedData;
                                                 }
 
                                                 /**
@@ -277,34 +320,82 @@ class QuotationTenderList extends Component
                                             };
                                         }
 
-                                        $data = $this->browser->scrape($url_apply, $safeFilename);
+                                        $data = $this->browser->scrape($url_apply, $safeFilename); // PS if browser errors out it will loop back from here, the code below this will be ignored
 
-                                        // Debug: Save the page content to a file
+                                        // 
+                                        // Data massaging - Convert all dates into SQL-friendly format
+                                        // Convert closing_date from "d M Y" format (e.g., "04 Mar 2026")
+                                        $closingDateParsed = \Carbon\Carbon::createFromFormat('d M Y', trim($tender['closing_date']));
+
+                                        // Convert begin_registration_date from "d/m/Y" format (e.g., "19/02/2026")
+                                        $beginRegDateParsed = null;
+                                        if (!empty($data['begin_registration_date'])) {
+                                            try {
+                                                $beginRegDateParsed = \Carbon\Carbon::createFromFormat('d/m/Y', trim($data['begin_registration_date']));
+                                            } catch (\Exception $e) {
+                                                logger()->error('Failed to parse begin_registration_date: ' . $data['begin_registration_date']);
+                                                $beginRegDateParsed = now();
+                                            }
+                                        } else {
+                                            $beginRegDateParsed = now();
+                                        }
+
+                                        // Convert end_registration_date from "d/m/Y" format (e.g., "20/02/2026")
+                                        $endRegDateParsed = null;
+                                        if (!empty($data['end_registration_date'])) {
+                                            try {
+                                                $endRegDateParsed = \Carbon\Carbon::createFromFormat('d/m/Y', trim($data['end_registration_date']));
+                                            } catch (\Exception $e) {
+                                                logger()->error('Failed to parse end_registration_date: ' . $data['end_registration_date']);
+                                                $endRegDateParsed = now();
+                                            }
+                                        } else {
+                                            $endRegDateParsed = now();
+                                        }
+
+
                                         if (!empty($data['pageContent'])) {
+                                            // Create new tender entry using User Model relationship
+                                            auth()->user()->quotationApplications()->create([
+                                                'file_name' => $tender['quotation_no'],
+                                                'title' => $tender['title'],
+                                                'specializations' => $tender['specialization'],
+                                                'begin_register_date' => $beginRegDateParsed->format('Y-m-d H:i:s'),
+                                                'end_register_date' => $endRegDateParsed->format('Y-m-d H:i:s'),
+                                                'closing_date' => $closingDateParsed->format('Y-m-d H:i:s'),
+                                                // 'site_visit_location' => $data['site_visit_location'] ?? '', // not yet handled
+                                                // 'site_visit_date' => $data['site_visit_date'] ?? now(), // not yet handled
+                                                'site_visit_location' => '',
+                                                'site_visit_date' => now(),
+                                                'serial_number' => $tender['ref_no'],
+                                                'owner' => $tender['organization'],
+                                                'status' => 'Pending', // Initial status
+                                                'slip_path' => '', // TODO: Will be filled after application submission
+                                                'advert_path' => '', // TODO: Will be filled after scraping details
+                                            ]);
+
+                                            // Debug: Save the page content to a file
                                             $debugPath = storage_path('logs/dusk/' . $safeFilename . '.html');
                                             file_put_contents($debugPath, $data['pageContent']);
+
+                                            continue;
                                         }
+
+                                        // Validate that we got data back
+                                        if ($data === null) {
+                                            throw new \Exception("Browser scraping returned null - browse() method failed");
+                                        }
+
+                                        // Check if scraping was successful
+                                        if (!$data['success']) {
+                                            throw new \Exception("Browser scraping failed: " . ($data['error'] ?? 'Unknown error'));
+                                        }
+
+                                        // Debug output
+                                        logger()->info('Scraping successful', ['data_keys' => array_keys($data)]);
 
                                         // Process the results
                                         $crawler = new Crawler($data['pageContent']);
-
-                                        // Quotation application settings check
-
-                                        // Submitting application form
-
-
-                                        // Create new tender entry
-                                        quotation_application::create([
-                                            'ref_no' => $tender['ref_no'],
-                                            'quotation_no' => $tender['quotation_no'],
-                                            'user_id' => auth()->user()->id,
-                                            'title' => $tender['title'],
-                                            'grade' => $tender['grade'],
-                                            'specialization' => $tender['specialization'],
-                                            'site_visit' => $tender['site_visit'],
-                                            'closing_date' => $tender['closing_date'],
-                                            'details_link' => $tender['details_link'],
-                                        ]);
                                     } catch (\Exception $e) {
                                         // Ensure the logs directory exists
                                         $logDir = storage_path('logs/dusk');
