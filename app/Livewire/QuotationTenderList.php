@@ -226,10 +226,16 @@ class QuotationTenderList extends Component
 
                                             try {
                                                 $this->visit($url_apply)
-                                                    ->waitFor('#header', 30)
-                                                    ->click('#MainContent_btn2')
+                                                    ->waitFor('#header', 30);
+
+                                                // Extract site visit fields BEFORE clicking or any redirect
+                                                $siteVisitLocation = $this->text('#MainContent_tSVMeet');
+                                                $siteVisitDate = $this->text('#MainContent_tSVDate');
+                                                $siteVisitTime = $this->text('#MainContent_tSVTime');
+
+                                                $this->click('#MainContent_btn2')
                                                     ->waitFor('input[name="ctl00$MainContent$tNoPendaftaran"]', 30)
-                                                    ->with('form', function (Browser $form) use (&$data) {
+                                                    ->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime) {
                                                         // Fill the form
                                                         $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', 'IP0302888-W')
                                                             ->click('input[name="ctl00$MainContent$btnQua"]');
@@ -245,10 +251,7 @@ class QuotationTenderList extends Component
                                                         // Extract date fields from the page (raw strings)
                                                         $beginRegDate = $form->text('#MainContent_pro1_lRegStart');
                                                         $endRegDate = $form->text('#MainContent_pro1_lRegEnd');
-                                                        // $siteVisitLocation = $form->text('#MainContent_tSVMeet'); // Not yet handle
-                                                        // $siteVisitDate = $form->text('#MainContent_tSVDate'); // Not yet handle
-                                                        // $siteVisitTime = $form->text('#MainContent_tSVTime'); // Not yet handle
-    
+
                                                         // Capture the data
                                                         $data = [
                                                             'success' => true,
@@ -259,8 +262,8 @@ class QuotationTenderList extends Component
                                                             'pageContent' => $form->driver->getPageSource(),
                                                             'begin_registration_date' => $beginRegDate,
                                                             'end_registration_date' => $endRegDate,
-                                                            // 'site_visit_location' => $siteVisitLocation, // Not yet handle
-                                                            // 'site_visit_date' => trim($siteVisitDate . ' ' . $siteVisitTime), // Not yet handle
+                                                            'site_visit_location' => $siteVisitLocation,
+                                                            'site_visit_date' => trim($siteVisitDate . ' ' . $siteVisitTime),
                                                         ];
                                                     });
                                             } catch (\Exception $e) {
@@ -353,6 +356,21 @@ class QuotationTenderList extends Component
                                             $endRegDateParsed = now();
                                         }
 
+                                        // Convert site_visit_date from "d/m/Y h:i A" or similar
+                                        $siteVisitDateParsed = null;
+                                        if (!empty($data['site_visit_date'])) {
+                                            try {
+                                                // Handle Malay time indicators by converting them to AM/PM
+                                                $siteVisitDateRaw = str_replace(['PAGI', 'PETANG'], ['AM', 'PM'], strtoupper($data['site_visit_date']));
+                                                $siteVisitDateParsed = \Carbon\Carbon::createFromFormat('d/m/Y h:i A', trim($siteVisitDateRaw));
+                                            } catch (\Exception $e) {
+                                                logger()->error('Failed to parse site_visit_date: ' . $data['site_visit_date']);
+                                                $siteVisitDateParsed = now();
+                                            }
+                                        } else {
+                                            $siteVisitDateParsed = now();
+                                        }
+
 
                                         if (!empty($data['pageContent'])) {
                                             // Create new tender entry using User Model relationship
@@ -363,10 +381,8 @@ class QuotationTenderList extends Component
                                                 'begin_register_date' => $beginRegDateParsed->format('Y-m-d H:i:s'),
                                                 'end_register_date' => $endRegDateParsed->format('Y-m-d H:i:s'),
                                                 'closing_date' => $closingDateParsed->format('Y-m-d H:i:s'),
-                                                // 'site_visit_location' => $data['site_visit_location'] ?? '', // not yet handled
-                                                // 'site_visit_date' => $data['site_visit_date'] ?? now(), // not yet handled
-                                                'site_visit_location' => '',
-                                                'site_visit_date' => now(),
+                                                'site_visit_location' => $data['site_visit_location'] ?? '',
+                                                'site_visit_date' => $siteVisitDateParsed->format('Y-m-d H:i:s'),
                                                 'serial_number' => $tender['ref_no'],
                                                 'owner' => $tender['organization'],
                                                 'status' => 'Pending', // Initial status
