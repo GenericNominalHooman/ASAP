@@ -10,25 +10,25 @@ use GuzzleHttp\Cookie\CookieJar;
 use Livewire\Component;
 use Symfony\Component\DomCrawler\Crawler;
 use Livewire\Attributes\Layout;
+use Livewire\WithPagination;
 use App\Models\quotation_application;
 use App\Models\Quotation;
 
 #[Layout('layouts.app')]
 class QuotationTenderList extends Component
 {
+    use WithPagination;
+
     public $url = '';
     public $url_details = '';
     public $content = '';
     public $status = '';
-    public $QuotationApplicationModel;
-    public $QuotationApplicationModelToday;
     protected $browser = null;
     public $userJabatan = [2, 3, 4]; // NOTE: REPLACE THIS WITH A WORKING USER'S JABATAN ID SETTINGS OPTION, AND USE ASSOCIATIVE ARRAY INSTEAD
 
     public function mount()
     {
-        $this->QuotationApplicationModel = quotation_application::all();
-        $this->QuotationApplicationModelToday = quotation_application::whereDate('created_at', now()->today())->get();
+        //
     }
 
     public function scrape()
@@ -501,8 +501,6 @@ class QuotationTenderList extends Component
             } else {
                 $this->status = 'Failed to fetch URL: ' . $response->getStatusCode();
             }
-            $this->QuotationApplicationModel = quotation_application::all();
-            $this->QuotationApplicationModelToday = quotation_application::whereDate('created_at', now()->today())->get();
             logger()->info($this->status);  // Check storage/logs/laravel.log
         } catch (\Exception $e) {
             $this->status = 'Error: ' . $e->getMessage();
@@ -538,7 +536,9 @@ class QuotationTenderList extends Component
 
     public function render()
     {
-        // return dd($this->QuotationApplicationModel);
-        return view('livewire.quotation-tender-list');
+        return view('livewire.quotation-tender-list', [
+            'QuotationApplicationModelToday' => quotation_application::whereDate('created_at', now()->today())->orderBy('created_at', 'desc')->paginate(10, ['*'], 'pageToday'),
+            'QuotationApplicationModel' => quotation_application::orderBy('created_at', 'desc')->paginate(10, ['*'], 'pageHistory'),
+        ]);
     }
 }

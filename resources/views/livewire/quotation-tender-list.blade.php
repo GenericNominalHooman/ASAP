@@ -105,13 +105,13 @@
                                                                 </td>
                                                                 <th scope="row"
                                                                     class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                                                    {{$row_count}}
+                                                                    {{ ($QuotationApplicationModelToday->firstItem() + $loop->index) }}
                                                                 </th>
                                                                 <td class="px-6 py-4">
                                                                     {{$QuotationApplication->owner}}
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    {{$QuotationApplication->file_name}}
+                                                                    <a href="#" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->file_name}}</a>
                                                                 </td>
                                                                 <td class="px-6 py-4">
                                                                     {{$QuotationApplication->title}}
@@ -120,10 +120,32 @@
                                                                     {{$QuotationApplication->specializations}}
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    {{$QuotationApplication->begin_register_date}}
+                                                                    @if ($QuotationApplication->begin_register_date)
+                                                                        {{ $QuotationApplication->begin_register_date }}<br>
+                                                                        @php
+                                                                            $days = \Carbon\Carbon::parse($QuotationApplication->begin_register_date)->diffInDays(now()) * -1;
+                                                                        @endphp
+                                                                        <span
+                                                                            class="{{ $days < 0 ? 'text-black' : ($days <= 1 ? 'text-red-600' : ($days <= 3 ? 'text-yellow-500' : 'text-green-600')) }}">
+                                                                            ({{ \Carbon\Carbon::parse($QuotationApplication->begin_register_date)->diffForHumans() }})
+                                                                        </span>
+                                                                    @else
+                                                                        -
+                                                                    @endif
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    {{$QuotationApplication->end_register_date}}
+                                                                    @if ($QuotationApplication->end_register_date)
+                                                                        {{ $QuotationApplication->end_register_date }}<br>
+                                                                        @php
+                                                                            $days = \Carbon\Carbon::parse($QuotationApplication->end_register_date)->diffInDays(now()) * -1;
+                                                                        @endphp
+                                                                        <span
+                                                                            class="{{ $days < 0 ? 'text-black' : ($days <= 1 ? 'text-red-600' : ($days <= 3 ? 'text-yellow-500' : 'text-green-600')) }}">
+                                                                            ({{ \Carbon\Carbon::parse($QuotationApplication->end_register_date)->diffForHumans() }})
+                                                                        </span>
+                                                                    @else
+                                                                        -
+                                                                    @endif
                                                                 </td>
                                                                 <td class="px-6 py-4">
                                                                     {{$QuotationApplication->closing_date}}
@@ -157,7 +179,7 @@
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    {{$QuotationApplication->serial_number}}
+                                                                    -
                                                                 </td>
                                                                 <td class="px-6 py-4">
                                                                     Not Set
@@ -170,10 +192,12 @@
                                                                         class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Edit</a>
                                                                 </td>
                                                             </tr>
-                                    @php $row_count++; @endphp
                                 @endforeach
                             </tbody>
                         </table>
+                        <div class="mt-4">
+                            {{ $QuotationApplicationModelToday->links() }}
+                        </div>
                     </div>
                 </div>
                 <h2 class="text-xl font-bold">Quotation Applied:</h2>
@@ -237,7 +261,7 @@
                                         Site Visit
                                     </th>
                                     <th scope="col" class="px-6 py-3">
-                                        Date
+                                        Date & Time(Site Visit)
                                     </th>
                                     <th scope="col" class="px-6 py-3">
                                         Serial Number(From Email)
@@ -254,9 +278,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @php
-                                    $row_count = 1;
-                                @endphp
                                 @foreach ($QuotationApplicationModel as $QuotationApplication)
                                     <tr
                                         class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
@@ -269,13 +290,13 @@
                                         </td>
                                         <th scope="row"
                                             class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                            {{$row_count}}
+                                            {{ ($QuotationApplicationModel->firstItem() + $loop->index) }}
                                         </th>
                                         <td class="px-6 py-4">
                                             {{$QuotationApplication->owner}}
                                         </td>
                                         <td class="px-6 py-4">
-                                            {{$QuotationApplication->file_name}}
+                                            <a href="#" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->file_name}}</a>
                                         </td>
                                         <td class="px-6 py-4">
                                             {{$QuotationApplication->title}}
@@ -284,10 +305,32 @@
                                             {{$QuotationApplication->specializations}}
                                         </td>
                                         <td class="px-6 py-4">
-                                            {{$QuotationApplication->begin_register_date}}
+                                            @if ($QuotationApplication->begin_register_date)
+                                                {{ $QuotationApplication->begin_register_date }}<br>
+                                                @php
+                                                    $days = \Carbon\Carbon::parse($QuotationApplication->begin_register_date)->diffInDays(now()) * -1;
+                                                @endphp
+                                                <span
+                                                    class="{{ $days < 0 ? 'text-black' : ($days <= 1 ? 'text-red-600' : ($days <= 3 ? 'text-yellow-500' : 'text-green-600')) }}">
+                                                    ({{ \Carbon\Carbon::parse($QuotationApplication->begin_register_date)->diffForHumans() }})
+                                                </span>
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4">
-                                            {{$QuotationApplication->end_register_date}}
+                                            @if ($QuotationApplication->end_register_date)
+                                                {{ $QuotationApplication->end_register_date }}<br>
+                                                @php
+                                                    $days = \Carbon\Carbon::parse($QuotationApplication->end_register_date)->diffInDays(now()) * -1;
+                                                @endphp
+                                                <span
+                                                    class="{{ $days < 0 ? 'text-black' : ($days <= 1 ? 'text-red-600' : ($days <= 3 ? 'text-yellow-500' : 'text-green-600')) }}">
+                                                    ({{ \Carbon\Carbon::parse($QuotationApplication->end_register_date)->diffForHumans() }})
+                                                </span>
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4">
                                             {{$QuotationApplication->closing_date}}
@@ -315,7 +358,7 @@
                                             @endif
                                         </td>
                                         <td class="px-6 py-4">
-                                            {{$QuotationApplication->serial_number}}
+                                            -
                                         </td>
                                         <td class="px-6 py-4">
                                             Not Set
@@ -328,10 +371,12 @@
                                                 class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Edit</a>
                                         </td>
                                     </tr>
-                                    @php $row_count++; @endphp
                                 @endforeach
                             </tbody>
                         </table>
+                        <div class="mt-4">
+                            {{ $QuotationApplicationModel->links() }}
+                        </div>
                     </div>
                 </div>
             </div>
