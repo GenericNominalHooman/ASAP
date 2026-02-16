@@ -136,10 +136,7 @@ class QuotationTenderList extends Component
                             });
                             // dd($tenders);
 
-                            if (session_status() === PHP_SESSION_ACTIVE) {
-                                session()->flush();
-                                session()->regenerate();
-                            }
+                            // session()->flush() removed as it might interfere with concurrent scraping sessions
 
                             // Check if end of pagination has been reached by comparing with prior pagination's last quotation_no
                             if ($pagination > 0 && $lastPaginationQuotationNo == $tenders[count($tenders) - 1]['quotation_no']) {
@@ -235,50 +232,79 @@ class QuotationTenderList extends Component
                                             ];
 
                                             try {
+                                                logger()->info('Visiting URL: ' . $url_apply);
                                                 $this->visit($url_apply)
                                                     ->waitFor('#header', 30);
 
-                                                // Extract site visit fields BEFORE clicking or any redirect
-                                                $siteVisitLocation = $this->text('#MainContent_tSVMeet');
-                                                $siteVisitDate = $this->text('#MainContent_tSVDate');
-                                                $siteVisitTime = $this->text('#MainContent_tSVTime');
+                                                // Helper to safely extract text
+                                                $safeText = function ($selector) {
+                                                    try {
+                                                        return $this->text($selector);
+                                                    } catch (\Exception $e) {
+                                                        return '';
+                                                    }
+                                                };
 
-                                                $this->click('#MainContent_btn2')
-                                                    ->waitFor('input[name="ctl00$MainContent$tNoPendaftaran"]', 30)
-                                                    ->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime) {
-                                                        // Fill the form
-                                                        $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', 'IP0302888-W')
-                                                            ->click('input[name="ctl00$MainContent$btnQua"]');
+                                                // Extract fields BEFORE clicking or any redirect
+                                                $siteVisitLocation = $safeText('#MainContent_tSVMeet');
+                                                $siteVisitDate = $safeText('#MainContent_tSVDate');
+                                                $siteVisitTime = $safeText('#MainContent_tSVTime');
+                                                $beginRegDate = $safeText('#MainContent_pro1_lRegStart');
+                                                $endRegDate = $safeText('#MainContent_pro1_lRegEnd');
 
-                                                        // Wait for any AJAX/redirect
-                                                        $form->pause(2000);
+                                                logger()->info('Checking if #MainContent_btn2 is enabled');
+                                                $this->waitUntilEnabled('#MainContent_btn2', 10);
+                                                $this->pause(1000); // Small pause for stability
 
-                                                        // Get form values with null checks
-                                                        $viewState = $form->attribute('input[name="__VIEWSTATE"]', 'value');
-                                                        $eventValidation = $form->attribute('input[name="__EVENTVALIDATION"]', 'value');
-                                                        $toolkitValue = $form->attribute('#ToolkitScriptManager1_HiddenField', 'value');
+                                                logger()->info('Clicking #MainContent_btn2');
+                                                $this->click('#MainContent_btn2');
 
-                                                        // Extract date fields from the page (raw strings)
-                                                        $beginRegDate = $form->text('#MainContent_pro1_lRegStart');
-                                                        $endRegDate = $form->text('#MainContent_pro1_lRegEnd');
+                                                // Check if the expected element appears or if we are still on the same page
+                                                try {
+                                                    $this->waitFor('input[name="ctl00$MainContent$tNoPendaftaran"]', 10);
+                                                } catch (\Exception $e) {
+                                                    logger()->error('Failed to find tNoPendaftaran after click. Capturing state.');
+                                                    $this->screenshot('fail-after-btn2-click-' . time());
+                                                    $this->storeSource('fail-after-btn2-click-' . time());
+                                                    throw $e;
+                                                }
 
-                                                        // Capture the data
-                                                        $data = [
-                                                            'success' => true,
-                                                            'error' => null,
-                                                            'viewState' => $viewState,
-                                                            'eventValidation' => $eventValidation,
-                                                            'toolkitValue' => $toolkitValue,
-                                                            'pageContent' => $form->driver->getPageSource(),
-                                                            'begin_registration_date' => $beginRegDate,
-                                                            'end_registration_date' => $endRegDate,
-                                                            'site_visit_location' => $siteVisitLocation,
-                                                            'site_visit_date' => trim($siteVisitDate . ' ' . $siteVisitTime),
-                                                        ];
-                                                    });
+                                                $this->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime, $beginRegDate, $endRegDate) {
+                                                    // Fill the form
+                                                    logger()->info('Filling and submitting the form');
+                                                    $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', 'IP0302888-W')
+                                                        ->click('input[name="ctl00$MainContent$btnQua"]');
+
+                                                    // Wait for any AJAX/redirect
+                                                    $form->pause(2000);
+
+                                                    // Get form values with null checks
+                                                    $viewState = $form->attribute('input[name="__VIEWSTATE"]', 'value');
+                                                    $eventValidation = $form->attribute('input[name="__EVENTVALIDATION"]', 'value');
+                                                    $toolkitValue = $form->attribute('#ToolkitScriptManager1_HiddenField', 'value');
+
+                                                    // Capture the data
+                                                    $data = [
+                                                        'success' => true,
+                                                        'error' => null,
+                                                        'viewState' => $viewState,
+                                                        'eventValidation' => $eventValidation,
+                                                        'toolkitValue' => $toolkitValue,
+                                                        'pageContent' => $form->driver->getPageSource(),
+                                                        'begin_registration_date' => $beginRegDate,
+                                                        'end_registration_date' => $endRegDate,
+                                                        'site_visit_location' => $siteVisitLocation,
+                                                        'site_visit_date' => trim($siteVisitDate . ' ' . $siteVisitTime),
+                                                    ];
+                                                });
                                             } catch (\Exception $e) {
+                                                logger()->error('scrapeTender Exception: ' . $e->getMessage());
                                                 $data['error'] = $e->getMessage();
                                                 $data['pageContent'] = $this->driver->getPageSource() ?? 'Unable to capture page source';
+
+                                                // Capture more context
+                                                $this->screenshot('scrape-error-' . time());
+                                                $this->storeSource('scrape-error-' . time());
                                             }
 
                                             return $data;
@@ -440,15 +466,8 @@ class QuotationTenderList extends Component
                                             'url' => $url_apply
                                         ]);
                                     } finally {
-                                        // Clean up the browser instance
-                                        if (isset($this->browser)) {
-                                            try {
-                                                $this->browser::closeAll();
-                                            } catch (\Exception $e) {
-                                                \Log::error('Error during browser teardown: ' . $e->getMessage());
-                                            }
-                                            $this->browser = null;
-                                        }
+                                        // We don't close the browser here to allow reuse for the next tender in the loop
+                                        // The browser will be closed in __destruct or at the end of the scrape method
                                     }
                                 }
                             }
@@ -504,7 +523,17 @@ class QuotationTenderList extends Component
             logger()->info($this->status);  // Check storage/logs/laravel.log
         } catch (\Exception $e) {
             $this->status = 'Error: ' . $e->getMessage();
-            logger()->info($this->status);  // Check storage/logs/laravel.log
+            logger()->error($this->status);  // Check storage/logs/laravel.log
+        } finally {
+            // Final browser cleanup
+            if (isset($this->browser)) {
+                try {
+                    $this->browser::closeAll();
+                } catch (\Exception $e) {
+                    \Log::error('Final browser teardown error: ' . $e->getMessage());
+                }
+                $this->browser = null;
+            }
         }
     }
 
