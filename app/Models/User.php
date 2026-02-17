@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'ssm_number',
     ];
 
     /**
@@ -53,17 +54,20 @@ class User extends Authenticatable
         return $this->hasMany(quotation_application::class);
     }
 
-    public function quotationSettings(){
+    public function quotationSettings()
+    {
         return $this->hasMany(QutoationSetting::class);
     }
-    
+
     // User can have many CIDB gred level code
-    public function gredLevels(){
+    public function gredLevels()
+    {
         return $this->hasMany(GredLevel::class);
     }
 
     // User can have many CIDB specialization code
-    public function specializations(){
+    public function specializations()
+    {
         return $this->hasMany(Specialization::class);
     }
 }

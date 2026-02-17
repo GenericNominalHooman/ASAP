@@ -24,11 +24,13 @@ class QuotationTenderList extends Component
     public $content = '';
     public $status = '';
     protected $browser = null;
+    public $userSSMNumber = '';
     public $userJabatan = [2, 3, 4]; // NOTE: REPLACE THIS WITH A WORKING USER'S JABATAN ID SETTINGS OPTION, AND USE ASSOCIATIVE ARRAY INSTEAD
 
     public function mount()
     {
         //
+        $this->userSSMNumber = auth()->user()->ssm_number;
     }
 
     public function scrape()
@@ -219,7 +221,7 @@ class QuotationTenderList extends Component
                                     $safeFilename = preg_replace('/[^a-zA-Z0-9\-_\.]/', '', $safeFilename); // Remove any remaining invalid characters
 
                                     if (!Browser::hasMacro('scrapeTender')) {
-                                        Browser::macro('scrapeTender', function ($url_apply) {
+                                        Browser::macro('scrapeTender', function ($url_apply, $ssmNumber) {
                                             $data = [
                                                 'success' => false,
                                                 'error' => null,
@@ -269,10 +271,10 @@ class QuotationTenderList extends Component
                                                     throw $e;
                                                 }
 
-                                                $this->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime, $beginRegDate, $endRegDate) {
+                                                $this->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime, $beginRegDate, $endRegDate, $ssmNumber) {
                                                     // Fill the form
                                                     logger()->info('Filling and submitting the form');
-                                                    $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', 'IP0302888-W')
+                                                    $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', $ssmNumber)
                                                         ->click('input[name="ctl00$MainContent$btnQua"]');
 
                                                     // Wait for any AJAX/redirect
@@ -317,7 +319,7 @@ class QuotationTenderList extends Component
                                             $this->browser = new class ('test') extends DuskTestCase {
                                                 protected $filename;
 
-                                                public function scrape($url_apply, $filename)
+                                                public function scrape($url_apply, $filename, $ssmNumber)
                                                 {
                                                     $this->filename = $filename;
                                                     set_time_limit(300);
@@ -328,8 +330,8 @@ class QuotationTenderList extends Component
                                                     // Use a reference variable to capture data since browse() doesn't return the callback value
                                                     $capturedData = null;
 
-                                                    $this->browse(function (Browser $browser) use ($url_apply, &$capturedData) {
-                                                        $capturedData = $browser->scrapeTender($url_apply);
+                                                    $this->browse(function (Browser $browser) use ($url_apply, &$capturedData, $ssmNumber) {
+                                                        $capturedData = $browser->scrapeTender($url_apply, $ssmNumber);
 
                                                         // Capture success screenshot
                                                         $name = 'success-' . str_replace('.html', '', $this->filename);
@@ -359,7 +361,7 @@ class QuotationTenderList extends Component
                                             };
                                         }
 
-                                        $data = $this->browser->scrape($url_apply, $safeFilename); // PS if browser errors out it will loop back from here, the code below this will be ignored
+                                        $data = $this->browser->scrape($url_apply, $safeFilename, $this->userSSMNumber); // PS if browser errors out it will loop back from here, the code below this will be ignored
 
                                         // 
                                         // Data massaging - Convert all dates into SQL-friendly format

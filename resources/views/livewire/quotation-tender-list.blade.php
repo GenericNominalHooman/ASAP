@@ -10,7 +10,9 @@
             <div class="p-6 text-gray-900 dark:text-gray-100">
                 <!-- <input wire:model="url" type="text" placeholder="Enter URL to scrape" class="form-control"> -->
                 <button wire:click="scrape"
-                    class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Apply</button>
+                    class="w-full py-4 mb-6 text-xl font-bold text-white transition-all duration-200 bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none">
+                    Apply S3pk Quotations
+                </button>
 
                 <h2 class="text-xl font-bold">Quotation Applied Today:</h2>
                 <div class="p-2">
@@ -147,8 +149,19 @@
                                                                         -
                                                                     @endif
                                                                 </td>
-                                                                <td class="px-6 py-4">
-                                                                    {{$QuotationApplication->closing_date}}
+                                                                 <td class="px-6 py-4">
+                                                                    @if ($QuotationApplication->closing_date)
+                                                                        {{ $QuotationApplication->closing_date }}<br>
+                                                                        @php
+                                                                            $days = \Carbon\Carbon::parse($QuotationApplication->closing_date)->diffInDays(now()) * -1;
+                                                                        @endphp
+                                                                        <span
+                                                                            class="{{ $days < 0 ? 'text-black' : ($days <= 1 ? 'text-red-600' : ($days <= 3 ? 'text-yellow-500' : 'text-green-600')) }}">
+                                                                            ({{ \Carbon\Carbon::parse($QuotationApplication->closing_date)->diffForHumans() }})
+                                                                        </span>
+                                                                    @else
+                                                                        -
+                                                                    @endif
                                                                 </td>
                                                                 <td class="px-6 py-4">
                                                                     <a href="#"
@@ -333,7 +346,18 @@
                                             @endif
                                         </td>
                                         <td class="px-6 py-4">
-                                            {{$QuotationApplication->closing_date}}
+                                            @if ($QuotationApplication->closing_date)
+                                                {{ $QuotationApplication->closing_date }}<br>
+                                                @php
+                                                    $days = \Carbon\Carbon::parse($QuotationApplication->closing_date)->diffInDays(now()) * -1;
+                                                @endphp
+                                                <span
+                                                    class="{{ $days < 0 ? 'text-black' : ($days <= 1 ? 'text-red-600' : ($days <= 3 ? 'text-yellow-500' : 'text-green-600')) }}">
+                                                    ({{ \Carbon\Carbon::parse($QuotationApplication->closing_date)->diffForHumans() }})
+                                                </span>
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4">
                                             <a href="#"

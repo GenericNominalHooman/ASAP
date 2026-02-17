@@ -12,6 +12,16 @@
 
                     <form class="max-w-sm mx-auto" wire:submit.prevent="saveSettings">
                         @csrf
+                        <h2 class="text-xl font-bold mb-2">Company SSM Number: </h2>
+                        <div class="mb-4">
+                            <input 
+                                type="text" 
+                                wire:model="ssmNumber"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
+                                placeholder="e.g. IP0302888-W"
+                            >
+                        </div>
+                        
                         <!-- Display current user's CIDB gred levels -->
                         <h2 class="text-xl font-bold">Gred:</h2>
                         @foreach($gredLevelsAll as $level)

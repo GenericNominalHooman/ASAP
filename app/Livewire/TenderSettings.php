@@ -10,6 +10,7 @@ use Livewire\Attributes\Layout;
 #[Layout('layouts.app')]
 class TenderSettings extends Component
 {
+    public $ssmNumber;
     // Greds and specilizations available data
     public $gredLevelsAll = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7'];
     public $specializationsBuildingsAll = [
@@ -130,6 +131,7 @@ class TenderSettings extends Component
     public function mount()
     {
         // Extract currently logged in user data from models
+        $this->ssmNumber = auth()->user()->ssm_number;
         $this->selectedGLevels = auth()->user()->gredLevels->pluck('g_level')->toArray();
         $this->selectedSpecializations = auth()->user()->specializations->pluck('specialization')->toArray();
     }
@@ -170,6 +172,11 @@ class TenderSettings extends Component
                 'specialization' => $specialization
             ]);
         }
+
+        // Update SSM Number
+        $user->update([
+            'ssm_number' => $this->ssmNumber
+        ]);
 
         // Show success message
         session()->flash('message', 'Settings saved successfully!');
