@@ -19,12 +19,15 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'MUHAMMAD ISKANDAR LUQMAN BIN ZAHARI',
             'email' => 'user1@mail.com',
+            'ssm_number' => 'IP0302888-W',
             'password' => ('password'),
         ]);
 
         // Call all seeders
         $this->call([
             QuotationApplicationSeeder::class,
+            GredLevelSeeder::class,
+            SpecializationSeeder::class,
         ]);
     }
 }

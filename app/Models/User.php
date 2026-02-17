@@ -3,9 +3,11 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\GredLevel;
+use App\Models\Specialization;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
@@ -21,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'ssm_number',
     ];
 
     /**
@@ -49,5 +52,22 @@ class User extends Authenticatable
     public function quotationApplications()
     {
         return $this->hasMany(quotation_application::class);
+    }
+
+    public function quotationSettings()
+    {
+        return $this->hasMany(QutoationSetting::class);
+    }
+
+    // User can have many CIDB gred level code
+    public function gredLevels()
+    {
+        return $this->hasMany(GredLevel::class);
+    }
+
+    // User can have many CIDB specialization code
+    public function specializations()
+    {
+        return $this->hasMany(Specialization::class);
     }
 }
