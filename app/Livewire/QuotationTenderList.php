@@ -222,7 +222,7 @@ class QuotationTenderList extends Component
                                     $safeFilename = preg_replace('/[^a-zA-Z0-9\-_\.]/', '', $safeFilename); // Remove any remaining invalid characters
 
                                     if (!Browser::hasMacro('scrapeTender')) {
-                                        Browser::macro('scrapeTender', function ($url_apply, $ssmNumber) {
+                                        Browser::macro('scrapeTender', function ($url_apply, $ssmNumber, $quotationNo) {
                                             $data = [
                                                 'success' => false,
                                                 'error' => null,
@@ -274,7 +274,7 @@ class QuotationTenderList extends Component
                                                     throw $e;
                                                 }
 
-                                                $this->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime, $beginRegDate, $endRegDate, $ssmNumber) {
+                                                $this->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime, $beginRegDate, $endRegDate, $ssmNumber, $quotationNo) {
                                                     // Fill the form
                                                     logger()->info('Filling and submitting the form');
                                                     $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', $ssmNumber)
@@ -327,7 +327,9 @@ class QuotationTenderList extends Component
 
                                                             if ($pdfBase64) {
                                                                 $data['slip_content'] = base64_decode($pdfBase64);
-                                                                $data['slip_name'] = 'slip-' . $ssmNumber . '-' . time() . '.pdf';
+                                                                // Sanitize quotation number for filename
+                                                                $sanitizedQuotationNo = str_replace(['/', '\\'], '_', $quotationNo);
+                                                                $data['slip_name'] = 'slip-' . $ssmNumber . '-' . $sanitizedQuotationNo . '.pdf';
                                                                 logger()->info('PDF captured successfully: ' . $data['slip_name']);
                                                             }
                                                         } else {
@@ -358,7 +360,7 @@ class QuotationTenderList extends Component
                                             $this->browser = new class ('test') extends DuskTestCase {
                                                 protected $filename;
 
-                                                public function scrape($url_apply, $filename, $ssmNumber)
+                                                public function scrape($url_apply, $filename, $ssmNumber, $quotationNo)
                                                 {
                                                     $this->filename = $filename;
                                                     set_time_limit(300);
@@ -369,8 +371,8 @@ class QuotationTenderList extends Component
                                                     // Use a reference variable to capture data since browse() doesn't return the callback value
                                                     $capturedData = null;
 
-                                                    $this->browse(function (Browser $browser) use ($url_apply, &$capturedData, $ssmNumber) {
-                                                        $capturedData = $browser->scrapeTender($url_apply, $ssmNumber);
+                                                    $this->browse(function (Browser $browser) use ($url_apply, &$capturedData, $ssmNumber, $quotationNo) {
+                                                        $capturedData = $browser->scrapeTender($url_apply, $ssmNumber, $quotationNo);
 
                                                         // Capture success screenshot
                                                         $name = 'success-' . str_replace('.html', '', $this->filename);
@@ -400,7 +402,7 @@ class QuotationTenderList extends Component
                                             };
                                         }
 
-                                        $data = $this->browser->scrape($url_apply, $safeFilename, $this->userSSMNumber); // PS if browser errors out it will loop back from here, the code below this will be ignored
+                                        $data = $this->browser->scrape($url_apply, $safeFilename, $this->userSSMNumber, $tender['quotation_no']); // PS if browser errors out it will loop back from here, the code below this will be ignored
 
                                         // 
                                         // Data massaging - Convert all dates into SQL-friendly format
@@ -611,10 +613,10 @@ class QuotationTenderList extends Component
             return;
         }
 
-        // Sanitize the download filename to remove invalid characters like / and \
-        $safeFileName = str_replace(['/', '\\'], '_', $application->file_name);
+        // Use the original filename stored in the slip_path for the download response
+        $downloadFileName = basename($application->slip_path);
 
-        return Storage::disk('local')->download($application->slip_path, $safeFileName . '-slip.pdf');
+        return Storage::disk('local')->download($application->slip_path, $downloadFileName);
     }
 
     // Helper method to extract all hidden form fields

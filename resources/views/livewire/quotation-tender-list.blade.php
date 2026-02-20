@@ -51,10 +51,10 @@
                                         Organization
                                     </th>
                                     <th scope="col" class="px-6 py-3">
-                                        File Name
+                                        Quotation Name
                                     </th>
                                     <th scope="col" class="px-6 py-3">
-                                        Title
+                                        Quotation Title
                                     </th>
                                     <th scope="col" class="px-6 py-3">
                                         Specialization(s)
@@ -72,7 +72,10 @@
                                         Slip
                                     </th>
                                     <th scope="col" class="px-6 py-3">
-                                        Site Visit
+                                        Require Site Visit?
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Location(Site Visit)
                                     </th>
                                     <th scope="col" class="px-6 py-3">
                                         Date & Time(Site Visit)
@@ -177,6 +180,9 @@
                                     ? 'YES' : 'NO'}}</a>
                                                                 </td>
                                                                 <td class="px-6 py-4">
+                                                                    {{$QuotationApplication->site_visit_location}}
+                                                                </td>
+                                                                <td class="px-6 py-4">
                                                                     @if ($QuotationApplication->site_visit_date)
                                                                                                     {{ $QuotationApplication->site_visit_date }}<br>
                                                                                                     @php
@@ -253,10 +259,10 @@
                                         Organization
                                     </th>
                                     <th scope="col" class="px-6 py-3">
-                                        File Name
+                                        Quotation Name
                                     </th>
                                     <th scope="col" class="px-6 py-3">
-                                        Title
+                                        Quotation Title
                                     </th>
                                     <th scope="col" class="px-6 py-3">
                                         Specialization(s)
@@ -274,7 +280,10 @@
                                         Slip
                                     </th>
                                     <th scope="col" class="px-6 py-3">
-                                        Site Visit
+                                        Require Site Visit?
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Location(Site Visit)
                                     </th>
                                     <th scope="col" class="px-6 py-3">
                                         Date & Time(Site Visit)
@@ -373,6 +382,9 @@
                                         <td class="px-6 py-4">
                                             <a href="#"
                                                 class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->site_visit_location ? 'YES' : 'NO'}}</a>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            {{$QuotationApplication->site_visit_location}}
                                         </td>
                                         <td class="px-6 py-4">
                                             @if ($QuotationApplication->site_visit_date)
