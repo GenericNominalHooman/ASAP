@@ -22,4 +22,12 @@ Route::get('list', QuotationTenderList::class)
     ->middleware(['auth'])
     ->name('list');
 
-require __DIR__.'/auth.php';
+Route::post('download/advert/{id}', [\App\Http\Controllers\DownloadController::class, 'downloadAdvert'])
+    ->middleware(['auth'])
+    ->name('download.advert');
+
+Route::post('download/slip/{id}', [\App\Http\Controllers\DownloadController::class, 'downloadSlip'])
+    ->middleware(['auth'])
+    ->name('download.slip');
+
+require __DIR__ . '/auth.php';

@@ -236,10 +236,14 @@ class QuotationTenderList extends Component
                                                 'slip_name' => null,
                                             ];
 
+                                            // Initialize advert variables outside to persist them
+                                            $advertContent = null;
+                                            $advertName = null;
+
                                             try {
                                                 logger()->info('Visiting URL: ' . $url_apply);
                                                 $this->visit($url_apply)
-                                                    ->waitFor('#header', 30);
+                                                    ->waitFor('#header', 15);
 
                                                 // Helper to safely extract text
                                                 $safeText = function ($selector) {
@@ -257,9 +261,100 @@ class QuotationTenderList extends Component
                                                 $beginRegDate = $safeText('#MainContent_pro1_lRegStart');
                                                 $endRegDate = $safeText('#MainContent_pro1_lRegEnd');
 
+                                                // Scrape Advertisement PDF
+                                                try {
+                                                    logger()->info('Checking for advert button (ImageButton1)');
+                                                    // Convert Dusk browser to WebDriver element check
+                                                    $advertButtons = $this->driver->findElements(\Facebook\WebDriver\WebDriverBy::name('ctl00$MainContent$ImageButton1'));
+
+                                                    if (count($advertButtons) > 0) {
+                                                        logger()->info('Advert button found. Preparing to download...');
+
+                                                        // Force download behavior using CDP
+                                                        // Normalize path for Windows compatibility
+                                                        $tempDir = str_replace('/', DIRECTORY_SEPARATOR, storage_path('app/temp'));
+
+                                                        // Ensure directory exists
+                                                        if (!file_exists($tempDir)) {
+                                                            mkdir($tempDir, 0755, true);
+                                                        }
+
+                                                        try {
+                                                            $this->driver->executeCustomCommand(
+                                                                '/session/:sessionId/chromium/send_command_and_get_result',
+                                                                'POST',
+                                                                [
+                                                                    'cmd' => 'Page.setDownloadBehavior',
+                                                                    'params' => [
+                                                                        'behavior' => 'allow',
+                                                                        'downloadPath' => $tempDir
+                                                                    ]
+                                                                ]
+                                                            );
+                                                            logger()->info('CDP Page.setDownloadBehavior command sent with path: ' . $tempDir);
+                                                        } catch (\Exception $cdpEx) {
+                                                            logger()->warning('Failed to send CDP command: ' . $cdpEx->getMessage());
+                                                        }
+
+                                                        // Use JS click to avoid interception issues
+                                                        $this->driver->executeScript('arguments[0].click();', [$advertButtons[0]]);
+
+                                                        // Wait for the download to complete
+                                                        $maxWait = 30; // seconds
+                                                        $waited = 0;
+                                                        $downloadedFile = null;
+
+                                                        while ($waited < $maxWait) {
+                                                            $files = glob($tempDir . '/*.pdf');
+                                                            if (!empty($files)) {
+                                                                // Get the most recently modified file
+                                                                usort($files, function ($a, $b) {
+                                                                    return filemtime($b) - filemtime($a);
+                                                                });
+                                                                $downloadedFile = $files[0];
+
+                                                                // Check if file is still being written
+                                                                sleep(2);
+                                                                break;
+                                                            }
+                                                            sleep(1);
+                                                            $waited++;
+                                                        }
+
+                                                        if ($downloadedFile && file_exists($downloadedFile)) {
+                                                            $advertContent = file_get_contents($downloadedFile);
+                                                            $sanitizedQuotationNo = str_replace(['/', '\\'], '_', $quotationNo);
+                                                            $advertName = 'advert-' . $sanitizedQuotationNo . '.pdf';
+                                                            logger()->info('Advert PDF downloaded successfully: ' . $advertName);
+
+                                                            // Cleanup
+                                                            unlink($downloadedFile);
+                                                        } else {
+                                                            logger()->warning('Timeout waiting for advert PDF download.');
+                                                        }
+
+                                                        // Wait for the main action button to ensure we are stable on main page
+                                                        $this->waitFor('#MainContent_btn2', 10);
+                                                        $this->pause(1000);
+                                                    } else {
+                                                        logger()->info('Advert button (ImageButton1) not found');
+                                                    }
+                                                } catch (\Exception $e) {
+                                                    logger()->error('Error scraping advert: ' . $e->getMessage());
+                                                    // Attempt to recover by reloading the main details URL if we really got lost
+                                                    try {
+                                                        if (strpos($this->driver->getCurrentURL(), 'IklanDetails.aspx') === false) {
+                                                            logger()->info('Attempting to recover navigation...');
+                                                            $this->visit($url_apply)->waitFor('#header', 30);
+                                                        }
+                                                    } catch (\Exception $recEx) {
+                                                        logger()->error('Failed to recover from advert error: ' . $recEx->getMessage());
+                                                    }
+                                                }
+
                                                 logger()->info('Checking if #MainContent_btn2 is enabled');
                                                 $this->waitUntilEnabled('#MainContent_btn2', 10);
-                                                $this->pause(1000); // Small pause for stability
+                                                $this->pause(250); // Small pause for stability
 
                                                 logger()->info('Clicking #MainContent_btn2');
                                                 $this->click('#MainContent_btn2');
@@ -274,7 +369,7 @@ class QuotationTenderList extends Component
                                                     throw $e;
                                                 }
 
-                                                $this->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime, $beginRegDate, $endRegDate, $ssmNumber, $quotationNo) {
+                                                $this->with('form', function (Browser $form) use (&$data, $siteVisitLocation, $siteVisitDate, $siteVisitTime, $beginRegDate, $endRegDate, $ssmNumber, $quotationNo, $advertContent, $advertName) {
                                                     // Fill the form
                                                     logger()->info('Filling and submitting the form');
                                                     $form->type('input[name="ctl00$MainContent$tNoPendaftaran"]', $ssmNumber)
@@ -301,6 +396,8 @@ class QuotationTenderList extends Component
                                                         'site_visit_location' => $siteVisitLocation,
                                                         'site_visit_date' => trim($siteVisitDate . ' ' . $siteVisitTime),
                                                         'slip_path' => null,
+                                                        'advert_content' => $advertContent,
+                                                        'advert_name' => $advertName,
                                                     ];
 
                                                     // Check for "btnSlip" or "btnInterest" (the print application slip buttons)
@@ -315,7 +412,7 @@ class QuotationTenderList extends Component
 
                                                             // Wait for the new page to load (it might be a redirect or a new tab/window depending on site behavior)
                                                             // Usually Dusk handles redirects automatically on click, but we pause for stability
-                                                            $form->pause(3000);
+                                                            $form->pause(1500);
 
                                                             logger()->info('Capturing PDF of the printing page');
                                                             // Using the native WebDriver printPage command
@@ -484,6 +581,22 @@ class QuotationTenderList extends Component
                                                 logger()->info('Slip PDF saved via Storage to: ' . $slipPath);
                                             }
 
+                                            // Save the advert PDF if content exists
+                                            if (!empty($data['advert_content']) && !empty($data['advert_name'])) {
+                                                $userId = auth()->id();
+                                                $advertPath = "adverts/{$userId}/" . $data['advert_name'];
+
+                                                // Store in private storage
+                                                Storage::disk('local')->put($advertPath, $data['advert_content']);
+
+                                                // Update the record with the advert path
+                                                auth()->user()->quotationApplications()
+                                                    ->where('file_name', $tender['quotation_no'])
+                                                    ->update(['advert_path' => $advertPath]);
+
+                                                logger()->info('Advert PDF saved via Storage to: ' . $advertPath);
+                                            }
+
                                             // Debug: Save the page content to a file
                                             $debugPath = storage_path('logs/dusk/' . $safeFilename . '.html');
                                             file_put_contents($debugPath, $data['pageContent']);
@@ -602,21 +715,6 @@ class QuotationTenderList extends Component
             $this->browser::closeAll();
             $this->browser = null;
         }
-    }
-
-    public function downloadSlip($id)
-    {
-        $application = auth()->user()->quotationApplications()->findOrFail($id);
-
-        if (!$application->slip_path || !Storage::disk('local')->exists($application->slip_path)) {
-            session()->flash('error', 'Slip file not found.');
-            return;
-        }
-
-        // Use the original filename stored in the slip_path for the download response
-        $downloadFileName = basename($application->slip_path);
-
-        return Storage::disk('local')->download($application->slip_path, $downloadFileName);
     }
 
     // Helper method to extract all hidden form fields
