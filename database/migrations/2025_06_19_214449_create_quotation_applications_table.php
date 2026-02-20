@@ -18,13 +18,13 @@ return new class extends Migration {
             $table->timestamp("begin_register_date");
             $table->timestamp("end_register_date");
             $table->timestamp("closing_date");
-            $table->text("slip_path");
-            $table->text("site_visit_location");
+            $table->text("slip_path")->nullable();
+            $table->text("site_visit_location")->nullable();
             // $table->timestamp("site_visit_date");
             $table->timestamp("site_visit_date")->nullable();
             $table->text("advert_path");
-            $table->text("serial_number");
-            $table->text("owner");
+            $table->text("serial_number")->nullable();
+            $table->text("owner")->nullable();
             $table->text("status");
             $table->unsignedBigInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

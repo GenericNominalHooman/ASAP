@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 use GuzzleHttp\Client;
@@ -231,6 +232,8 @@ class QuotationTenderList extends Component
                                                 'pageContent' => null,
                                                 'begin_registration_date' => null,
                                                 'end_registration_date' => null,
+                                                'slip_content' => null,
+                                                'slip_name' => null,
                                             ];
 
                                             try {
@@ -297,7 +300,43 @@ class QuotationTenderList extends Component
                                                         'end_registration_date' => $endRegDate,
                                                         'site_visit_location' => $siteVisitLocation,
                                                         'site_visit_date' => trim($siteVisitDate . ' ' . $siteVisitTime),
+                                                        'slip_path' => null,
                                                     ];
+
+                                                    // Check for "btnSlip" or "btnInterest" (the print application slip buttons)
+                                                    try {
+                                                        $btnSlip = $form->driver->findElements(\Facebook\WebDriver\WebDriverBy::name('ctl00$MainContent$btnSlip'));
+                                                        $btnInterest = $form->driver->findElements(\Facebook\WebDriver\WebDriverBy::name('ctl00$MainContent$btnInterest'));
+
+                                                        if ($btnSlip || $btnInterest) {
+                                                            $buttonName = $btnSlip ? 'ctl00$MainContent$btnSlip' : 'ctl00$MainContent$btnInterest';
+                                                            logger()->info("Found {$buttonName}, clicking to redirect to printing page");
+                                                            $form->click("input[name=\"{$buttonName}\"]");
+
+                                                            // Wait for the new page to load (it might be a redirect or a new tab/window depending on site behavior)
+                                                            // Usually Dusk handles redirects automatically on click, but we pause for stability
+                                                            $form->pause(3000);
+
+                                                            logger()->info('Capturing PDF of the printing page');
+                                                            // Using the native WebDriver printPage command
+                                                            // This returns a base64 encoded string of the PDF
+                                                            $pdfBase64 = $form->driver->executeCustomCommand('/session/:sessionId/print', 'POST', [
+                                                                'orientation' => 'portrait',
+                                                                'background' => true,
+                                                            ]);
+
+                                                            if ($pdfBase64) {
+                                                                $data['slip_content'] = base64_decode($pdfBase64);
+                                                                $data['slip_name'] = 'slip-' . $ssmNumber . '-' . time() . '.pdf';
+                                                                logger()->info('PDF captured successfully: ' . $data['slip_name']);
+                                                            }
+                                                        } else {
+                                                            logger()->info('Neither btnSlip nor btnInterest found on this page');
+                                                        }
+                                                    } catch (\Exception $slipEx) {
+                                                        logger()->error('Error during slip capture: ' . $slipEx->getMessage());
+                                                        // We don't throw here to allow the main scraping data to be returned even if slip fails
+                                                    }
                                                 });
                                             } catch (\Exception $e) {
                                                 logger()->error('scrapeTender Exception: ' . $e->getMessage());
@@ -424,9 +463,24 @@ class QuotationTenderList extends Component
                                                 'serial_number' => $tender['ref_no'],
                                                 'owner' => $tender['organization'],
                                                 'status' => 'Pending', // Initial status
-                                                'slip_path' => '', // TODO: Will be filled after application submission
                                                 'advert_path' => '', // TODO: Will be filled after scraping details
                                             ]);
+
+                                            // Save the slip PDF if content exists using native Laravel storage to store privately for the current user
+                                            if (!empty($data['slip_content']) && !empty($data['slip_name'])) {
+                                                $userId = auth()->id();
+                                                $slipPath = "slips/{$userId}/" . $data['slip_name'];
+
+                                                // Store in private storage (local disk root is storage/app/private)
+                                                Storage::disk('local')->put($slipPath, $data['slip_content']);
+
+                                                // Update the record with the slip path
+                                                auth()->user()->quotationApplications()
+                                                    ->where('file_name', $tender['quotation_no'])
+                                                    ->update(['slip_path' => $slipPath]);
+
+                                                logger()->info('Slip PDF saved via Storage to: ' . $slipPath);
+                                            }
 
                                             // Debug: Save the page content to a file
                                             $debugPath = storage_path('logs/dusk/' . $safeFilename . '.html');
@@ -546,6 +600,21 @@ class QuotationTenderList extends Component
             $this->browser::closeAll();
             $this->browser = null;
         }
+    }
+
+    public function downloadSlip($id)
+    {
+        $application = auth()->user()->quotationApplications()->findOrFail($id);
+
+        if (!$application->slip_path || !Storage::disk('local')->exists($application->slip_path)) {
+            session()->flash('error', 'Slip file not found.');
+            return;
+        }
+
+        // Sanitize the download filename to remove invalid characters like / and \
+        $safeFileName = str_replace(['/', '\\'], '_', $application->file_name);
+
+        return Storage::disk('local')->download($application->slip_path, $safeFileName . '-slip.pdf');
     }
 
     // Helper method to extract all hidden form fields
