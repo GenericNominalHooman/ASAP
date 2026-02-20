@@ -116,7 +116,16 @@
                                                                     {{$QuotationApplication->owner}}
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    <a href="#" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->file_name}}</a>
+                                                                    @if($QuotationApplication->advert_path)
+                                                                        <form action="{{ route('download.advert', $QuotationApplication->id) }}" method="POST" class="inline">
+                                                                            @csrf
+                                                                            <button type="submit" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
+                                                                                {{ $QuotationApplication->file_name }}
+                                                                            </button>
+                                                                        </form>
+                                                                    @else
+                                                                        {{ $QuotationApplication->file_name }}
+                                                                    @endif
                                                                 </td>
                                                                 <td class="px-6 py-4">
                                                                     {{$QuotationApplication->title}}
@@ -168,19 +177,21 @@
                                                                 </td>
                                                                 <td class="px-6 py-4">
                                                                     @if($QuotationApplication->slip_path)
-                                                                        <a href="#" wire:click.prevent="downloadSlip({{ $QuotationApplication->id }})"
-                                                                            class="font-medium text-blue-600 dark:text-blue-500 hover:underline">YES</a>
+                                                                        <form action="{{ route('download.slip', $QuotationApplication->id) }}" method="POST" class="inline">
+                                                                            @csrf
+                                                                            <button type="submit" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
+                                                                                YES
+                                                                            </button>
+                                                                        </form>
                                                                     @else
                                                                         <span class="text-gray-400">NO</span>
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    <a href="#"
-                                                                        class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->site_visit_location
-                                    ? 'YES' : 'NO'}}</a>
+                                                                    <p>{{$QuotationApplication->site_visit_location? 'YES' : 'NO'}}</p>
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    {{$QuotationApplication->site_visit_location}}
+                                                                    {{ $QuotationApplication->site_visit_location ?: '-' }}
                                                                 </td>
                                                                 <td class="px-6 py-4">
                                                                     @if ($QuotationApplication->site_visit_date)
@@ -321,7 +332,16 @@
                                             {{$QuotationApplication->owner}}
                                         </td>
                                         <td class="px-6 py-4">
-                                            <a href="#" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->file_name}}</a>
+                                            @if($QuotationApplication->advert_path)
+                                                <form action="{{ route('download.advert', $QuotationApplication->id) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
+                                                        {{ $QuotationApplication->file_name }}
+                                                    </button>
+                                                </form>
+                                            @else
+                                                {{ $QuotationApplication->file_name }}
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4">
                                             {{$QuotationApplication->title}}
@@ -373,18 +393,21 @@
                                         </td>
                                         <td class="px-6 py-4">
                                             @if($QuotationApplication->slip_path)
-                                                <a href="#" wire:click.prevent="downloadSlip({{ $QuotationApplication->id }})"
-                                                    class="font-medium text-blue-600 dark:text-blue-500 hover:underline">YES</a>
+                                                <form action="{{ route('download.slip', $QuotationApplication->id) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
+                                                        YES
+                                                    </button>
+                                                </form>
                                             @else
                                                 <span class="text-gray-400">NO</span>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4">
-                                            <a href="#"
-                                                class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->site_visit_location ? 'YES' : 'NO'}}</a>
+                                            <p>{{$QuotationApplication->site_visit_location ? 'YES' : 'NO'}}</p>
                                         </td>
                                         <td class="px-6 py-4">
-                                            {{$QuotationApplication->site_visit_location}}
+                                            {{ $QuotationApplication->site_visit_location ?: '-' }}
                                         </td>
                                         <td class="px-6 py-4">
                                             @if ($QuotationApplication->site_visit_date)

@@ -43,9 +43,18 @@ abstract class DuskTestCase extends BaseTestCase
         ])->unless($this->hasHeadlessDisabled(), function (Collection $items) {
             return $items->merge([
                 '--disable-gpu',
-                '--headless=new',
+                // '--headless=new', // Disabled for debugging
             ]);
         })->all());
+
+        $options->setExperimentalOption('prefs', [
+            'download.default_directory' => storage_path('app/temp'),
+            'download.prompt_for_download' => false,
+            'download.directory_upgrade' => true,
+            'safebrowsing.enabled' => true,
+            'plugins.always_open_pdf_externally' => true,
+            'profile.default_content_settings.popups' => 0,
+        ]);
 
         return RemoteWebDriver::create(
             $_ENV['DUSK_DRIVER_URL'] ?? env('DUSK_DRIVER_URL') ?? 'http://localhost:9515',
