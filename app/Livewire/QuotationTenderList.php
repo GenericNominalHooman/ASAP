@@ -549,6 +549,14 @@ class QuotationTenderList extends Component
 
 
                                         if (!empty($data['pageContent'])) {
+                                            // Determine initial status based on registration dates
+                                            $initialStatus = 'Pending';
+                                            if (now()->lt($beginRegDateParsed)) {
+                                                $initialStatus = 'Not yet applied';
+                                            } elseif (now()->gt($endRegDateParsed)) {
+                                                $initialStatus = 'Expired';
+                                            }
+
                                             // Create new tender entry using User Model relationship
                                             auth()->user()->quotationApplications()->create([
                                                 'file_name' => $tender['quotation_no'],
@@ -561,7 +569,7 @@ class QuotationTenderList extends Component
                                                 'site_visit_date' => ($siteVisitDateParsed === null) ? null : $siteVisitDateParsed->format('Y-m-d H:i:s'),
                                                 'serial_number' => $tender['ref_no'],
                                                 'owner' => $tender['organization'],
-                                                'status' => 'Pending', // Initial status
+                                                'status' => $initialStatus,
                                                 'advert_path' => '', // TODO: Will be filled after scraping details
                                             ]);
 
@@ -573,10 +581,13 @@ class QuotationTenderList extends Component
                                                 // Store in private storage (local disk root is storage/app/private)
                                                 Storage::disk('local')->put($slipPath, $data['slip_content']);
 
-                                                // Update the record with the slip path
+                                                // Update the record with the slip path and status(based on user action)
                                                 auth()->user()->quotationApplications()
                                                     ->where('file_name', $tender['quotation_no'])
-                                                    ->update(['slip_path' => $slipPath]);
+                                                    ->update([
+                                                        'slip_path' => $slipPath,
+                                                        'status' => 'Applied',
+                                                    ]);
 
                                                 logger()->info('Slip PDF saved via Storage to: ' . $slipPath);
                                             }
@@ -648,15 +659,13 @@ class QuotationTenderList extends Component
                             $eventValidation = $crawler->filter('#__EVENTVALIDATION')->attr('value');
                             $viewStateGenerator = $crawler->filter('#__VIEWSTATEGENERATOR')->attr('value');
 
-                            // REDUNDANT CODE!!!
                             // Store or process the tenders
                             $this->tenders = $tenders;
 
-                            // For pagination, you can store the tokens for the next request
+                            // For pagination, store the tokens for the next request
                             $this->viewState = $viewState;
                             $this->eventValidation = $eventValidation;
                             $this->viewStateGenerator = $viewStateGenerator;
-                            // REDUNDANT CODE!!!
 
                             // Save current page's last quotation_no for next iteration comparison
                             $lastPaginationQuotationNo = $tenders[count($tenders) - 1]['quotation_no'];
