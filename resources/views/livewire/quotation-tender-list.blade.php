@@ -164,9 +164,12 @@
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    <a href="#"
-                                                                        class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->slip_path
-                                    ? 'YES' : 'NO'}}</a>
+                                                                    @if($QuotationApplication->slip_path)
+                                                                        <a href="#" wire:click.prevent="downloadSlip({{ $QuotationApplication->id }})"
+                                                                            class="font-medium text-blue-600 dark:text-blue-500 hover:underline">YES</a>
+                                                                    @else
+                                                                        <span class="text-gray-400">NO</span>
+                                                                    @endif
                                                                 </td>
                                                                 <td class="px-6 py-4">
                                                                     <a href="#"
@@ -360,8 +363,12 @@
                                             @endif
                                         </td>
                                         <td class="px-6 py-4">
-                                            <a href="#"
-                                                class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{{$QuotationApplication->slip_path ? 'YES' : 'NO'}}</a>
+                                            @if($QuotationApplication->slip_path)
+                                                <a href="#" wire:click.prevent="downloadSlip({{ $QuotationApplication->id }})"
+                                                    class="font-medium text-blue-600 dark:text-blue-500 hover:underline">YES</a>
+                                            @else
+                                                <span class="text-gray-400">NO</span>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4">
                                             <a href="#"
