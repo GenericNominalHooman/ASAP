@@ -1,6 +1,6 @@
 <x-slot name="header">
     <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-        {{ __('Applied Quotation/Tender Listing') }}
+        {{ __('Apply Quotations') }}
     </h2>
 </x-slot>
 
@@ -8,11 +8,87 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900 dark:text-gray-100">
-                <!-- <input wire:model="url" type="text" placeholder="Enter URL to scrape" class="form-control"> -->
+                <h2 class="text-xl font-bold">Auto apply quotation status:</h2>
+                <!-- From Uiverse.io by Bastiennnn --> 
+                <div class="flex flex-col lg:flex-row flex-wrap justify-center lg:justify-between items-center gap-6 my-6 w-full">
+                    <div class="card-quotation-status">
+                        <div class="header">
+                            <div class="top">
+                                <div class="circle">
+                                    <span class="red circle2"></span>
+                                </div>
+                                <div class="circle">
+                                    <span class="yellow circle2"></span>
+                                </div>
+                                <div class="circle">
+                                    <span class="green circle2"></span>
+                                </div>
+                                <div class="title">
+                                    <p id="title2">style.css</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="code-container">
+                            <textarea class="area" id="code" name="code" readonly="">
+                                09:00 Auto Quotation Result
+                            </textarea>
+                        </div>
+                    </div>
+                    <div class="card-quotation-status">
+                        <div class="header">
+                            <div class="top">
+                                <div class="circle">
+                                    <span class="red circle2"></span>
+                                </div>
+                                <div class="circle">
+                                    <span class="yellow circle2"></span>
+                                </div>
+                                <div class="circle">
+                                    <span class="green circle2"></span>
+                                </div>
+                                <div class="title">
+                                    <p id="title2">style.css</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="code-container">
+                            <textarea class="area" id="code" name="code" readonly="">
+                                13:00 Auto Quotation Result
+                            </textarea>
+                        </div>
+                    </div>
+                    <div class="card-quotation-status">
+                        <div class="header">
+                            <div class="top">
+                                <div class="circle">
+                                    <span class="red circle2"></span>
+                                </div>
+                                <div class="circle">
+                                    <span class="yellow circle2"></span>
+                                </div>
+                                <div class="circle">
+                                    <span class="green circle2"></span>
+                                </div>
+                                <div class="title">
+                                    <p id="title2">style.css</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="code-container">
+                            <textarea class="area" id="code" name="code" readonly="">
+                                22:00 Auto Quotation Result
+                            </textarea>
+                        </div>
+                    </div>
+                </div>
+
+
+                <hr class="mt-4 mb-4">
                 <button wire:click="scrape"
                     class="w-full py-4 mb-6 text-xl font-bold text-white transition-all duration-200 bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none">
                     Apply S3pk Quotations
                 </button>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 italic">* Currently the system will only auto apply JKR, PDT and JPS quotations. More will be added in the future</p>
 
                 <h2 class="text-xl font-bold">Quotations Applied Today:</h2>
                 <div class="p-2">
@@ -239,7 +315,7 @@
                         </div>
                     </div>
                 </div>
-                <hr class="mt-4">
+                <hr class="mt-4 mb-4">
                     <h2 class="text-xl font-bold">Quotations Applied:</h2>
                     <div class="p-2">
                         <div

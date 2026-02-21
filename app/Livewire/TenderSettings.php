@@ -10,7 +10,8 @@ use Livewire\Attributes\Layout;
 #[Layout('layouts.app')]
 class TenderSettings extends Component
 {
-    public $ssmNumber;
+    // PS: Page's coding style: feature centric(input, massaging, processing and output are grouped by feature)
+    public $quotationApplicationTimerOptions = ["09:00", "13:00", "22:00"]; // Make this into a dynamic user choosen timer for next implmentation
     // Greds and specilizations available data
     public $gredLevelsAll = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7'];
     public $specializationsBuildingsAll = [
@@ -125,6 +126,8 @@ class TenderSettings extends Component
     ];
 
     // QuotationSettings data
+    public $ssmNumber;
+    public $selectedTimers = [];
     public $selectedGLevels = [];
     public $selectedSpecializations = [];
 
@@ -134,6 +137,10 @@ class TenderSettings extends Component
         $this->ssmNumber = auth()->user()->ssm_number;
         $this->selectedGLevels = auth()->user()->gredLevels->pluck('g_level')->toArray();
         $this->selectedSpecializations = auth()->user()->specializations->pluck('specialization')->toArray();
+        $userTimers = auth()->user()->quotationApplicationTimers()->where('enabled', true)->pluck('timing')->toArray();
+        $this->selectedTimers = collect($userTimers)->map(function ($time) {
+            return \Carbon\Carbon::parse($time)->format('H:i');
+        })->toArray();
     }
 
     public function render()
@@ -144,11 +151,25 @@ class TenderSettings extends Component
     public function saveSettings()
     {
         // 
-        // Update G Levels
+        // Update Timer
         // 
-        // Get the authenticated user
         $user = auth()->user();
 
+        // 1. Disable all timers for the user first
+        $user->quotationApplicationTimers()->update(['enabled' => false]);
+
+        // 2. Enable/Create the selected timers
+        foreach ($this->selectedTimers as $timing) {
+            $user->quotationApplicationTimers()->updateOrCreate(
+                ['timing' => $timing . ':00'], // database time format
+                ['enabled' => true]
+            );
+        }
+
+
+        // 
+        // Update G Levels
+        // 
         // Delete existing gred levels
         $user->gredLevels()->delete();
 
