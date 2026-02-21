@@ -571,14 +571,9 @@ class QuotationTenderList extends Component
                                                 'site_visit_location' => $data['site_visit_location'] ?? '',
                                                 'site_visit_date' => ($siteVisitDateParsed === null) ? null : $siteVisitDateParsed->format('Y-m-d H:i:s'),
                                                 'serial_number' => $tender['ref_no'],
-<<<<<<< Updated upstream
-                                                'owner' => $tender['organization'],
-                                                'status' => 'Pending', // Initial status
-=======
                                                 'owner' => "NOT SET",
                                                 'organization' => $tender['organization'],
                                                 'status' => $initialStatus,
->>>>>>> Stashed changes
                                                 'advert_path' => '', // TODO: Will be filled after scraping details
                                             ]);
 
