@@ -32,6 +32,7 @@ class QuotationApplicationFactory extends Factory
             'advert_path' => fake()->url(),
             'serial_number' => "ip" . fake()->randomNumber(8),
             'owner' => fake()->randomElement(['Abg E', 'Zahari']),
+            'organization' => fake()->randomElement(['JPS', 'PDT', 'JKR']),
             'status' => fake()->randomElement(['sudah hantar', 'tidak hantar', 'proses']),
             'user_id' => fake()->randomElement([1]),
             'created_at' => now(),

@@ -24,14 +24,25 @@ class QuotationTenderList extends Component
     public $url_details = '';
     public $content = '';
     public $status = '';
+    public $searchApplied = '';
+    public $searchToday = '';
     protected $browser = null;
     public $userSSMNumber = '';
     public $userJabatan = [2, 3, 4]; // NOTE: REPLACE THIS WITH A WORKING USER'S JABATAN ID SETTINGS OPTION, AND USE ASSOCIATIVE ARRAY INSTEAD
 
     public function mount()
     {
-        //
         $this->userSSMNumber = auth()->user()->ssm_number;
+    }
+
+    public function updatingSearchApplied()
+    {
+        $this->resetPage('pageHistory');
+    }
+
+    public function updatingSearchToday()
+    {
+        $this->resetPage('pageToday');
     }
 
     public function scrape()
@@ -560,8 +571,14 @@ class QuotationTenderList extends Component
                                                 'site_visit_location' => $data['site_visit_location'] ?? '',
                                                 'site_visit_date' => ($siteVisitDateParsed === null) ? null : $siteVisitDateParsed->format('Y-m-d H:i:s'),
                                                 'serial_number' => $tender['ref_no'],
+<<<<<<< Updated upstream
                                                 'owner' => $tender['organization'],
                                                 'status' => 'Pending', // Initial status
+=======
+                                                'owner' => "NOT SET",
+                                                'organization' => $tender['organization'],
+                                                'status' => $initialStatus,
+>>>>>>> Stashed changes
                                                 'advert_path' => '', // TODO: Will be filled after scraping details
                                             ]);
 
@@ -737,8 +754,29 @@ class QuotationTenderList extends Component
     public function render()
     {
         return view('livewire.quotation-tender-list', [
-            'QuotationApplicationModelToday' => quotation_application::whereDate('created_at', now()->today())->orderBy('created_at', 'desc')->paginate(10, ['*'], 'pageToday'),
-            'QuotationApplicationModel' => quotation_application::orderBy('created_at', 'desc')->paginate(10, ['*'], 'pageHistory'),
+            'QuotationApplicationModelToday' => quotation_application::where('user_id', auth()->id())
+                ->whereDate('created_at', now()->today())
+                ->when($this->searchToday, function ($query) {
+                    $query->where(function ($q) {
+                        $q->where('file_name', 'like', '%' . $this->searchToday . '%')
+                            ->orWhere('title', 'like', '%' . $this->searchToday . '%')
+                            ->orWhere('owner', 'like', '%' . $this->searchToday . '%')
+                            ->orWhere('organization', 'like', '%' . $this->searchToday . '%');
+                    });
+                })
+                ->orderBy('created_at', 'desc')
+                ->paginate(10, ['*'], 'pageToday'),
+            'QuotationApplicationModel' => quotation_application::where('user_id', auth()->id())
+                ->when($this->searchApplied, function ($query) {
+                    $query->where(function ($q) {
+                        $q->where('file_name', 'like', '%' . $this->searchApplied . '%')
+                            ->orWhere('title', 'like', '%' . $this->searchApplied . '%')
+                            ->orWhere('owner', 'like', '%' . $this->searchApplied . '%')
+                            ->orWhere('organization', 'like', '%' . $this->searchApplied . '%');
+                    });
+                })
+                ->orderBy('created_at', 'desc')
+                ->paginate(10, ['*'], 'pageHistory'),
         ]);
     }
 }

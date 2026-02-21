@@ -13,6 +13,6 @@ class QuotationApplicationSeeder extends Seeder
      */
     public function run(): void
     {
-        quotation_application::factory()->count(10)->create();
+        quotation_application::factory()->count(5)->create();
     }
 }

@@ -25,6 +25,7 @@ return new class extends Migration {
             $table->text("advert_path");
             $table->text("serial_number")->nullable();
             $table->text("owner")->nullable();
+            $table->string("organization", 4)->nullable();
             $table->text("status");
             $table->unsignedBigInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

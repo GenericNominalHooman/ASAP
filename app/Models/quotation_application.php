@@ -26,6 +26,7 @@ class quotation_application extends Model
         'advert_path',
         'serial_number',
         'owner',
+        'organization',
         'status',
         'user_id',
     ];
@@ -35,7 +36,8 @@ class quotation_application extends Model
         return QuotationApplicationFactory::new();
     }
 
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
 }
