@@ -15,6 +15,9 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->time('timing');
             $table->boolean('enabled')->default(true);
+            $table->text('status')->nullable();
+            $table->text('log')->nullable();
+            $table->timestamp('last_ran_at')->nullable();
             $table->timestamps();
         });
     }

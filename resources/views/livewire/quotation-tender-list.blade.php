@@ -4,82 +4,55 @@
     </h2>
 </x-slot>
 
-<div class="py-12">
+<div class="py-12 relative">
+    <!-- Full Screen Loading Overlay for Manual Scrape -->
+    <div wire:loading wire:target="scrape" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gray-900 bg-opacity-80 backdrop-blur-sm text-center">
+        <svg class="w-16 h-16 text-blue-500 animate-spin mx-auto mt-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h2 class="mt-4 text-2xl font-semibold text-white px-4">Scraping in progress...</h2>
+        <p class="mt-2 text-md text-gray-300 px-4">This may take a few minutes. Please do not refresh or close this page.</p>
+    </div>
+
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900 dark:text-gray-100">
                 <h2 class="text-xl font-bold">Auto apply quotation status:</h2>
                 <!-- From Uiverse.io by Bastiennnn --> 
-                <div class="flex flex-col lg:flex-row flex-wrap justify-center lg:justify-between items-center gap-6 my-6 w-full">
-                    <div class="card-quotation-status">
+                <div class="flex flex-col lg:flex-row flex-wrap justify-center lg:justify-between items-start gap-6 my-6 w-full">
+                    @forelse($userTimers as $timer)
+                    <div class="card-quotation-status" x-data="{ showLogs: false }">
                         <div class="header">
-                            <div class="top">
-                                <div class="circle">
-                                    <span class="red circle2"></span>
+                            <div class="top justify-between">
+                                <div class="flex items-center">
+                                    <div class="circle">
+                                        <span class="red circle2" style="{{ ($timer['status'] ?? 'pending') === 'unsuccessful' ? '' : 'opacity: 0.3; filter: grayscale(1);' }}"></span>
+                                    </div>
+                                    <div class="circle">
+                                        <span class="yellow circle2 {{ ($timer['status'] ?? 'pending') === 'running' ? 'animate-pulse' : '' }}" style="{{ in_array($timer['status'] ?? 'pending', ['pending', 'running']) ? '' : 'opacity: 0.3; filter: grayscale(1);' }}"></span>
+                                    </div>
+                                    <div class="circle">
+                                        <span class="green circle2" style="{{ ($timer['status'] ?? 'pending') === 'successful' ? '' : 'opacity: 0.3; filter: grayscale(1);' }}"></span>
+                                    </div>
+                                    <div class="title max-w-[200px]">
+                                        <p id="title2" class="truncate">{{ ucfirst($timer['status'] ?? 'pending') }} | {{ \Carbon\Carbon::parse($timer['timing'])->format('H:i') }}</p>
+                                    </div>
                                 </div>
-                                <div class="circle">
-                                    <span class="yellow circle2"></span>
-                                </div>
-                                <div class="circle">
-                                    <span class="green circle2"></span>
-                                </div>
-                                <div class="title">
-                                    <p id="title2">style.css</p>
-                                </div>
+                                <button @click="showLogs = !showLogs" class="text-slate-400 hover:text-white transition-colors p-1" title="Toggle Logs">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-200" :class="showLogs ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
-                        <div class="code-container">
-                            <textarea class="area" id="code" name="code" readonly="">
-                                09:00 Auto Quotation Result
-                            </textarea>
+                        <div class="code-container" x-show="showLogs" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" x-cloak>
+                            <textarea class="area" id="code" name="code" readonly="">{{ $timer['log'] ?? 'No logs available yet.' }}</textarea>
                         </div>
                     </div>
-                    <div class="card-quotation-status">
-                        <div class="header">
-                            <div class="top">
-                                <div class="circle">
-                                    <span class="red circle2"></span>
-                                </div>
-                                <div class="circle">
-                                    <span class="yellow circle2"></span>
-                                </div>
-                                <div class="circle">
-                                    <span class="green circle2"></span>
-                                </div>
-                                <div class="title">
-                                    <p id="title2">style.css</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="code-container">
-                            <textarea class="area" id="code" name="code" readonly="">
-                                13:00 Auto Quotation Result
-                            </textarea>
-                        </div>
-                    </div>
-                    <div class="card-quotation-status">
-                        <div class="header">
-                            <div class="top">
-                                <div class="circle">
-                                    <span class="red circle2"></span>
-                                </div>
-                                <div class="circle">
-                                    <span class="yellow circle2"></span>
-                                </div>
-                                <div class="circle">
-                                    <span class="green circle2"></span>
-                                </div>
-                                <div class="title">
-                                    <p id="title2">style.css</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="code-container">
-                            <textarea class="area" id="code" name="code" readonly="">
-                                22:00 Auto Quotation Result
-                            </textarea>
-                        </div>
-                    </div>
+                    @empty
+                    <p class="text-gray-500 italic mt-4 w-full text-center">No active timers found.</p>
+                    @endforelse
                 </div>
 
 

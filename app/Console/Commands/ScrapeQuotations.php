@@ -41,34 +41,56 @@ class ScrapeQuotations extends Command
         $scrapedCount = 0;
 
         foreach ($users as $user) {
-            $timerSet = false;
-            $timers = $user->quotationApplicationTimers()->where('enabled', true)->pluck('timing');
+            $activeTimer = null;
+            $timers = $user->quotationApplicationTimers()->where('enabled', true)->get();
 
             foreach ($timers as $timer) {
                 try {
-                    $timerCarbon = Carbon::parse($timer);
+                    $timerCarbon = Carbon::parse($timer->timing);
                     $lowerBound = $timerCarbon->copy()->subMinutes($range);
                     $upperBound = $timerCarbon->copy()->addMinutes($range);
 
                     if ($now->between($lowerBound, $upperBound)) {
-                        $timerSet = true;
+                        $activeTimer = $timer;
                         break;
                     }
                 } catch (\Exception $e) {
-                    Log::error("Failed to parse user timer for user {$user->id}: {$timer}");
+                    Log::error("Failed to parse user timer for user {$user->id}: {$timer->timing}");
                 }
             }
 
-            if ($timerSet) {
+            if ($activeTimer) {
                 $this->info("Scheduled scraping applies for User ID: {$user->id} ({$user->name}). Initiating scrape...");
+
+                $activeTimer->update([
+                    'status' => 'running',
+                    'log' => "Scraping started at " . now()->format('Y-m-d H:i:s') . "\n",
+                ]);
+                $this->comment(" -> Database: Timer status updated to 'running'.");
+
                 try {
                     // Call the shared ScraperService
                     $scraperService->scrapeForUser($user);
+
                     $this->info("Successfully completed scraping for User ID: {$user->id}");
                     $scrapedCount++;
+
+                    $activeTimer->update([
+                        'status' => 'successful',
+                        'log' => $activeTimer->log . "Scraping completed successfully at " . now()->format('Y-m-d H:i:s') . "\n",
+                        'last_ran_at' => now(),
+                    ]);
+                    $this->info(" -> Database: Timer status updated to 'successful' at " . now());
                 } catch (\Exception $e) {
                     $this->error("Scraping failed for User ID: {$user->id}. Error: " . $e->getMessage());
                     Log::error("Scraping command failed for User ID: {$user->id}", ['exception' => $e]);
+
+                    $activeTimer->update([
+                        'status' => 'unsuccessful',
+                        'log' => $activeTimer->log . "Scraping failed at " . now()->format('Y-m-d H:i:s') . "\nError: " . $e->getMessage(),
+                        'last_ran_at' => now(),
+                    ]);
+                    $this->error(" -> Database: Timer status updated to 'unsuccessful' due to error.");
                 }
             }
         }

@@ -104,6 +104,7 @@ class ScraperService
                                 ];
                                 $orgName = $orgMap[$jabatan] ?? ($quotationNo ? substr($quotationNo, 0, 3) : null);
 
+                                // Data massaging applicable quotations
                                 return [
                                     'ref_no' => $node->filter('span[id*="_lApplication_Label60_"]')->text(), // rows count number
                                     'quotation_no' => $quotationNo,
@@ -120,9 +121,10 @@ class ScraperService
                             // Check if end of pagination has been reached by comparing with prior pagination's last quotation_no
                             if ($pagination > 0 && count($tenders) > 0 && $lastPaginationQuotationNo == $tenders[count($tenders) - 1]['quotation_no']) {
                                 $isEndOfPagination = true;
+                                logger()->info('End of pagination reached for jabatan: ' . $jabatan . '\n last quotation no: ' . $lastPaginationQuotationNo);
                             }
 
-                            // Create the quotation/tender within DB based on inputted db[prior: low]
+                            // Create the quotation within DB based on quotations on the web page [prior: low]
                             foreach ($tenders as $tender) {
                                 // Parse closing_date from "d M Y" format (e.g., "04 Mar 2026")
                                 $closingDateParsed = null;
@@ -151,7 +153,7 @@ class ScraperService
                                 );
                             }
 
-                            // Apply the tenders/quotations to the user
+                            // Filter tenders based on user's gred levels and specialization
                             foreach ($tenders as $tender) {
                                 // Check whether the tenders/quotations already exists within DB for the current user
                                 $existingTender = $user->quotationApplications()->where('file_name', $tender['quotation_no'])->first();
@@ -183,6 +185,7 @@ class ScraperService
                                     continue;
                                 }
 
+                                // Applying quotations using dusk
                                 if ($existingTender) {
                                     // Update existing tender: * A quotation is updated through the system due to mistakes - not yet handle
                                 } else {
@@ -216,9 +219,10 @@ class ScraperService
                                                 $this->visit($url_apply)
                                                     ->waitFor('#header', 15);
 
-                                                $safeText = function ($selector) {
+                                                $browser = $this;
+                                                $safeText = function ($selector) use ($browser) {
                                                     try {
-                                                        return $this->text($selector);
+                                                        return $browser->text($selector);
                                                     } catch (\Exception $e) {
                                                         return '';
                                                     }
@@ -433,10 +437,9 @@ class ScraperService
                                             };
                                         }
 
+                                        // Saving Files and Database Updating
                                         $data = $this->browser->scrape($url_apply, $safeFilename, $userSSMNumber, $tender['quotation_no']);
-
                                         $closingDateParsed = Carbon::createFromFormat('d M Y', trim($tender['closing_date']));
-
                                         $beginRegDateParsed = null;
                                         if (!empty($data['begin_registration_date'])) {
                                             try {
@@ -498,6 +501,19 @@ class ScraperService
                                                 'advert_path' => '',
                                             ]);
 
+                                            if (!empty($data['advert_content']) && !empty($data['advert_name'])) {
+                                                $userId = $user->id;
+                                                $advertPath = "adverts/{$userId}/" . $data['advert_name'];
+
+                                                Storage::disk('local')->put($advertPath, $data['advert_content']);
+
+                                                $user->quotationApplications()
+                                                    ->where('file_name', $tender['quotation_no'])
+                                                    ->update(['advert_path' => $advertPath]);
+
+                                                logger()->info('Advert PDF saved via Storage to: ' . $advertPath);
+                                            }
+
                                             if (!empty($data['slip_content']) && !empty($data['slip_name'])) {
                                                 $userId = $user->id;
                                                 $slipPath = "slips/{$userId}/" . $data['slip_name'];
@@ -512,19 +528,6 @@ class ScraperService
                                                     ]);
 
                                                 logger()->info('Slip PDF saved via Storage to: ' . $slipPath);
-                                            }
-
-                                            if (!empty($data['advert_content']) && !empty($data['advert_name'])) {
-                                                $userId = $user->id;
-                                                $advertPath = "adverts/{$userId}/" . $data['advert_name'];
-
-                                                Storage::disk('local')->put($advertPath, $data['advert_content']);
-
-                                                $user->quotationApplications()
-                                                    ->where('file_name', $tender['quotation_no'])
-                                                    ->update(['advert_path' => $advertPath]);
-
-                                                logger()->info('Advert PDF saved via Storage to: ' . $advertPath);
                                             }
 
                                             $debugPath = storage_path('logs/dusk/' . $safeFilename . '.html');
@@ -557,7 +560,6 @@ class ScraperService
                                             'exception' => $e,
                                             'url' => $url_apply
                                         ]);
-                                    } finally {
                                     }
                                 }
                             }
@@ -565,6 +567,7 @@ class ScraperService
                             $viewState = $crawler->filter('#__VIEWSTATE')->attr('value');
                             $eventValidation = $crawler->filter('#__EVENTVALIDATION')->attr('value');
 
+                            // Used in order to determine whether the next page is the last page
                             if (count($tenders) > 0) {
                                 $lastPaginationQuotationNo = $tenders[count($tenders) - 1]['quotation_no'];
                             }
@@ -591,6 +594,7 @@ class ScraperService
             if (isset($this->browser)) {
                 try {
                     $this->browser::closeAll();
+                    logger()->info('Browser closed successfully');
                 } catch (\Exception $e) {
                     \Log::error('Final browser teardown error: ' . $e->getMessage());
                 }

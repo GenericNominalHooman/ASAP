@@ -25,10 +25,8 @@ class QuotationTenderList extends Component
     public function mount()
     {
         $this->userSSMNumber = auth()->user()->ssm_number;
-        $this->userTimers = auth()->user()->quotationApplicationTimers()->where('enabled', true)->pluck('timing')->toArray();
+        $this->userTimers = auth()->user()->quotationApplicationTimers()->where('enabled', true)->get()->toArray();
     }
-
-
 
     public function updatingSearchApplied()
     {
@@ -47,11 +45,12 @@ class QuotationTenderList extends Component
         try {
             $scraperService->scrapeForUser(auth()->user());
             $this->status = 'Scraping completed successfully!';
-            session()->flash('message', 'Scraping completed successfully!');
+            logger()->info($this->status);
+            $this->dispatch('flash-message', message: 'Scraping completed successfully!', type: 'success');
         } catch (\Exception $e) {
             $this->status = 'Error: ' . $e->getMessage();
             logger()->error($this->status);
-            session()->flash('error', 'Scraping failed: ' . $e->getMessage());
+            $this->dispatch('flash-message', message: 'Scraping failed: ' . $e->getMessage(), type: 'error');
         }
     }
 

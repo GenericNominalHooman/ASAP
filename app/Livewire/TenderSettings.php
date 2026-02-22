@@ -200,7 +200,8 @@ class TenderSettings extends Component
         ]);
 
         // Show success message
-        session()->flash('message', 'Settings saved successfully!');
+        $this->dispatch('flash-message', message: 'Settings saved successfully!', type: 'success');
+        logger()->info('Settings saved successfully!');
 
         // Optional: Refresh the component to show updated data
         $this->mount();

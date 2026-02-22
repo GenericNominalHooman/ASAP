@@ -16,6 +16,9 @@ class UserQuotationApplicationTimer extends Model
         'user_id',
         'timing',
         'enabled',
+        'status',
+        'log',
+        'last_ran_at',
     ];
 
     protected function casts(): array
