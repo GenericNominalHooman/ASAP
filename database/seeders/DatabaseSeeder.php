@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             QuotationApplicationSeeder::class,
             GredLevelSeeder::class,
             SpecializationSeeder::class,
+            UserQuotationApplicationTimerSeeder::class,
         ]);
     }
 }

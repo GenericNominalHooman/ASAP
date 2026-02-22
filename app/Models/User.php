@@ -54,9 +54,14 @@ class User extends Authenticatable
         return $this->hasMany(quotation_application::class);
     }
 
-    public function quotationSettings()
+    // public function quotationSettings()
+    // {
+    //     return $this->hasMany(QutoationSetting::class);
+    // }
+
+    public function quotationApplicationTimers()
     {
-        return $this->hasMany(QutoationSetting::class);
+        return $this->hasMany(UserQuotationApplicationTimer::class);
     }
 
     // User can have many CIDB gred level code
